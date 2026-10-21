@@ -1,0 +1,90 @@
+# TD Cargas — Publicar no GitHub e na Vercel
+
+Sistema web em português, com identidade azul (#0B315A) e laranja (#F58220), login Supabase, acesso por cidade, manifestos por viagem, conferência, recebimentos, Pix e backup.
+
+## 1. Preparar o Supabase
+
+Este pacote usa o Supabase para os usuários E para os dados. Os dados da versão hospedada anteriormente não são transferidos apenas ao publicar o código.
+
+1. Abra o projeto Supabase que já utiliza. O projeto atual chama-se **recebimento-cargas**, ref `bdmogkdnhvstcgfuxznz`.
+2. No **SQL Editor**, execute o conteúdo de `supabase/01_instalacao.sql`.
+3. O script preserva as contas e perfis existentes e cria as tabelas `td_manifestos`, `td_cidades` e `td_config_pagamento`, além das permissões de acesso.
+4. Em um projeto novo, crie o usuário administrador em **Authentication → Users** e execute `supabase/02_primeiro_admin.sql` após substituir o e-mail. No projeto atual, sua conta de administrador já existe.
+5. A função `manifestos-create-city-user` já está publicada no projeto atual. Em outro projeto, publique a pasta `supabase/functions/manifestos-create-city-user` com esse nome, mantendo a verificação JWT ativada. O código está incluído no pacote. As variáveis `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` são disponibilizadas pelo ambiente das Edge Functions. A chave privilegiada fica somente na função, nunca na Vercel ou no navegador.
+
+## 2. Subir para o GitHub
+
+1. Extraia este ZIP.
+2. Crie um repositório no GitHub e envie os arquivos da pasta `td-cargas-vercel` diretamente para a raiz do repositório.
+3. Inclua os arquivos de configuração, como `.gitignore` e `.env.example`.
+4. Não envie `node_modules`, `.next`, arquivos `.env.local` nem backups operacionais.
+
+O pacote não contém senhas, chaves reais, sessões, PDFs de clientes nem dados operacionais. O worker local do PDF é uma dependência necessária para ler os manifestos.
+
+## 3. Publicar na Vercel
+
+1. Na Vercel, selecione **Add New → Project** e importe o repositório do GitHub.
+2. Framework: **Next.js**. Root Directory: a pasta que contém `package.json` (normalmente a raiz).
+3. Em **Environment Variables**, cadastre para Production e Preview:
+
+| Variável | Valor |
+| --- | --- |
+| `SUPABASE_URL` | URL do seu projeto Supabase |
+| `SUPABASE_PUBLISHABLE_KEY` | Chave Publishable do mesmo projeto |
+
+Copie os valores no painel do Supabase. Use somente a chave publicável; não configure `service_role` neste aplicativo.
+
+4. Node.js: **22.x**. O arquivo `vercel.json` configura instalação (`npm ci`) e build (`npm run build`).
+5. Clique em **Deploy**. O login do sistema é por e-mail e senha do Supabase; não depende do login do ChatGPT.
+6. Após a publicação, entre como administrador e confirme as cidades e os perfis.
+
+Referências oficiais: https://vercel.com/docs/frameworks/full-stack/nextjs e https://vercel.com/docs/environment-variables
+
+## 4. Migrar os dados da versão anterior
+
+1. Entre como administrador na versão anterior do sistema.
+2. Em **Viagens e manifestos**, clique em **Exportar backup**. Guarde o arquivo JSON em local protegido.
+3. Na nova versão da Vercel, entre como administrador e clique em **Importar backup** na mesma tela.
+4. A importação mantém manifestos, pagamentos, conferências, cidades cadastradas e a configuração Pix. Registros com IDs já existentes são preservados, sem sobrescrita.
+5. O limite por importação é **3 MB**. Em backups maiores, divida os manifestos em mais de um arquivo JSON, mantendo `format`, `version`, `cities` e `settings`.
+6. Usuários e senhas não fazem parte do backup: permanecem no Supabase Auth. Usando o mesmo projeto, os perfis também continuam disponíveis.
+
+O backup contém informações de clientes e recebimentos. Não o envie ao GitHub.
+
+## 5. Conferir a operação
+
+- Administrador: todas as cidades, usuários, importação, financeiro e Pix.
+- Entregador: apenas as cargas da cidade vinculada, conferência e baixa.
+- Pagamento parcial exige justificativa. A confirmação fica registrada com o usuário autenticado.
+- Gerar QR Code não confirma um pagamento; confira o recebimento antes da baixa.
+- Os manifestos permanecem separados por viagem. A visão consolidada contém somente saldos em aberto.
+- Em **Cidades → Nova cidade**, novos destinos ficam disponíveis para os usuários e a importação.
+
+## Desenvolvimento local
+
+Requisitos: Node.js 22 e npm.
+
+```bash
+npm ci
+cp .env.example .env.local
+# Preencha .env.local com a URL e a Publishable Key do Supabase.
+npm run dev
+```
+
+Validações:
+
+```bash
+npm run typecheck
+npm run build
+```
+
+No Windows, copie `.env.example` para `.env.local` pelo Explorador ou pelo editor. Nunca publique `.env.local`.
+
+## Arquivos principais
+
+- `app/`: interface e rotas do servidor Next.js.
+- `lib/`: autenticação, dados, Pix, leitura de manifestos e regras de cidade.
+- `supabase/`: instalação SQL, administrador inicial e função de criação de contas.
+- `public/`: ícone e worker do leitor de PDF.
+- `.env.example`: nomes das configurações necessárias.
+- `package.json`, `package-lock.json`, `vercel.json`: instalação e publicação.
