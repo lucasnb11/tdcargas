@@ -1,0 +1,8 @@
+import {getAccess} from '../../../lib/access';
+import {privateJson} from '../../../lib/private-json';
+import {getCityCatalog} from '../../../lib/city-catalog';
+import {normalizeCity} from '../../../lib/cities';
+import {createSupabase} from '../../../lib/supabase-server';
+export const dynamic='force-dynamic';
+export async function GET(){try{const user=await getAccess();if(user?.role!=='admin')return privateJson({error:'Acesso não autorizado.'},{status:403});return privateJson(await getCityCatalog());}catch{return privateJson({error:'Não foi possível carregar as cidades.'},{status:500});}}
+export async function POST(req:Request){try{const user=await getAccess();if(user?.role!=='admin')return privateJson({error:'Somente administradores podem cadastrar cidades.'},{status:403});const body:any=await req.json();const name=String(body.name||'').trim().replace(/\s+/g,' ').toUpperCase(),key=normalizeCity(name);if(key.length<2||key.length>80||!/^[A-Z][A-Z .'-]+$/.test(key))return privateJson({error:'Informe um nome de cidade válido, com 2 a 80 caracteres.'},{status:400});if((await getCityCatalog()).some(c=>c.key===key))return privateJson({error:'Esta cidade já está disponível no cadastro.'},{status:409});const client=await createSupabase();const {error}=await client.from('td_cidades').insert({key,name});if(error)return privateJson({error:error.code==='23505'?'Esta cidade já foi cadastrada.':error.message},{status:error.code==='23505'?409:400});return privateJson({ok:true,city:{key,name,source:'Cadastrada'}});}catch{return privateJson({error:'Não foi possível cadastrar a cidade.'},{status:500});}}

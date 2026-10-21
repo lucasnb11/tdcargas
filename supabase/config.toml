@@ -1,0 +1,2 @@
+[functions.manifestos-create-city-user]
+verify_jwt = true
