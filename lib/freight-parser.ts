@@ -1,6 +1,6 @@
 import {validateFreights,FreightItem} from './freights';
 const money=(value:string)=>Math.round(Number(value.replace(/\./g,'').replace(',','.'))*100);
-export function parseFreightDocuments(text:string,manifests:any[]){
+export function parseFreightDocuments(text:string,manifests:any[],targetManifestId?:string){
  const records:any[]=[],errors:string[]=[];
  const starts=[...text.matchAll(/(?:^|\n)Conhecimento[^\n]*\n\s*(\d{6}\/\d{4})/gi)];
  if(!starts.length)throw Error('Não foi possível reconhecer os conhecimentos no PDF.');
@@ -9,6 +9,7 @@ export function parseFreightDocuments(text:string,manifests:any[]){
   const block=text.slice(match.index,starts[index+1]?.index??text.length),rowId=match[1];
   const manifestId=block.match(/Viagem\s*\n\s*(\d{6}\/\d{4})/i)?.[1];
   if(!manifestId){errors.push(`Conhecimento ${rowId}: viagem não identificada.`);return;}
+  if(targetManifestId&&manifestId!==targetManifestId){errors.push(`Conhecimento ${rowId}: pertence à viagem ${manifestId}, diferente do manifesto ${targetManifestId} desta importação.`);return;}
   const expectedCount=block.match(/QTD\s+de\s+Fretes\s*:\s*(\d+)/i)?.[1];
   const totalText=block.match(/QTD\s+de\s+Fretes[^\n]*\bFrete\s*:\s*([\d.]+,\d{2})/i)?.[1];
   const key=JSON.stringify([manifestId,rowId]);

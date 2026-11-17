@@ -106,3 +106,11 @@ test('leitura de notas exige viagem, conhecimento, quantidade e soma corretos',(
  assert.equal(parseFreightDocuments(freightDoc+'\n'+freightDoc,manifestsForFreights).records.length,1);
  assert.throws(()=>parseFreightDocuments('arquivo irreconhecível',[]),/reconhecer/);
 });
+
+test('segunda etapa limita o vínculo ao manifesto que acabou de ser importado',()=>{
+ assert.equal(parseFreightDocuments(freightDoc,manifestsForFreights,'000099/2026').records.length,1);
+ const other=parseFreightDocuments(freightDoc,manifestsForFreights,'000100/2026');
+ assert.equal(other.records.length,0);assert.match(other.errors[0],/diferente do manifesto/);
+ // A importação avulsa continua aceitando todos os manifestos cadastrados.
+ assert.equal(parseFreightDocuments(freightDoc,manifestsForFreights).records.length,1);
+});

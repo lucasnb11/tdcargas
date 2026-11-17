@@ -120,7 +120,7 @@ Ao conferir a importação do PDF, selecione F/B SÃO DOMINGOS V ou F/B DONA DOM
 ## Pagamentos por conhecimento ou nota/frete
 
 - A tela do destinatário permite **Pagar conhecimento** e **Notas/fretes**. Cada nota mostra frete, recebido e saldo, com pagamento integral ou parcial e as quatro justificativas já existentes.
-- O administrador pode cadastrar as notas manualmente ou usar **Viagens e manifestos → Importar notas/fretes** com o PDF dos conhecimentos individuais (até 50 MB / 500 páginas). A leitura usa texto quando disponível e OCR no próprio dispositivo para páginas digitalizadas. Bibliotecas e dados de reconhecimento são baixados de CDNs públicas; as páginas são processadas localmente.
+- O administrador pode cadastrar as notas manualmente ou usar **Viagens e manifestos → Importar conhecimentos** com o PDF dos conhecimentos individuais (até 50 MB / 500 páginas). A leitura usa texto quando disponível e OCR no próprio dispositivo para páginas digitalizadas. Bibliotecas e dados de reconhecimento são baixados de CDNs públicas; as páginas são processadas localmente.
 - A prévia lista os conhecimentos reconhecidos e as pendências de leitura. O usuário deve conferir e confirmar os dados antes de salvar. OCR pode exigir correções manuais. Somente os conhecimentos com número de viagem, quantidade e soma de fretes coerentes são oferecidos para vínculo.
 - A soma dos fretes de cada conhecimento deve coincidir exatamente com o valor do manifesto. As notas são vinculadas aos números da viagem e do conhecimento, sem criar outra cobrança.
 - Os pagamentos feitos pelo conhecimento, incluindo registros anteriores, são distribuídos na ordem das notas exibidas. Pagamentos feitos por uma nota permanecem vinculados a ela. Ambos reduzem o mesmo saldo do conhecimento e do manifesto.
@@ -130,3 +130,10 @@ Ao conferir a importação do PDF, selecione F/B SÃO DOMINGOS V ou F/B DONA DOM
 ## Pagar tudo do destinatário
 
 Na lista de conhecimentos da tela do destinatário, Pagar tudo abre uma confirmação com os saldos dos conhecimentos, total, data e forma de pagamento. A operação quita apenas os saldos desse destinatário no manifesto atual, respeitando a cidade do entregador e preservando os pagamentos anteriores. Toda a baixa ocorre em uma transação e cada conhecimento recebe seu próprio registro com identificador de lote. Se o saldo mudar antes da confirmação, é necessário conferir novamente. Para outra instalação, execute `supabase/06_pagar_destinatario.sql` após a migração 05.
+
+## Importação em duas etapas
+
+1. Importe o manifesto, escolha a embarcação e confira os valores. O botão Confirmar e importar conhecimentos salva o manifesto.
+2. Assim que o manifesto é salvo, abre a tela Importar conhecimentos. O sistema informa o número salvo, explica a finalidade do segundo PDF e limita os vínculos a essa viagem.
+
+O botão Importar conhecimentos depois encerra a segunda etapa sem desfazer o manifesto. A importação pode ser retomada em Viagens e manifestos → Importar conhecimentos. Caso falhe apenas o recarregamento da lista após salvar o manifesto, os dados recém-conferidos continuam disponíveis para a leitura da segunda etapa; o salvamento final valida os vínculos novamente no servidor.
