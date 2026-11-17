@@ -106,3 +106,7 @@ Ao selecionar Parcial, escolha Sem dinheiro, Acordo com administração, Pagamen
 ## Destinatários por manifesto
 
 A lista principal agrupa os conhecimentos por destinatário dentro de cada manifesto. Clique no nome ou em Ver conhecimentos para expandir os documentos individuais. Nessa área ficam Conferir carga, Registrar pagamento / Dar baixa e, para administradores, Ver histórico. Cada pagamento mantém o vínculo ao conhecimento original e suas justificativas. A consulta de pendências mostra destinatários com saldo no manifesto selecionado; ao expandir, são mostrados todos os conhecimentos daquele destinatário no mesmo manifesto, inclusive os quitados. A exportação continua respeitando os filtros por conhecimento.
+
+## Leitura em celular
+
+Em telas até 760 px, as tabelas são apresentadas como cartões com rótulos. Destinatários e conhecimentos usam os mesmos dados e ações do desktop. Nomes completos podem ocupar várias linhas, e os botões de pagamento e histórico ficam abaixo dos valores. Filtros, seleção de manifesto e janelas se ajustam à largura disponível.
