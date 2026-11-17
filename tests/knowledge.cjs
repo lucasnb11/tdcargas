@@ -57,3 +57,13 @@ test('agrupa destinatário dentro do manifesto, preservando conhecimentos e paga
  assert.equal(group.rows[0],rows[0]);assert.equal(group.rows[0].payments.length,1);
  assert.deepEqual(recipientGroups([]),[]);
 });
+
+const {VESSELS,validateVessel}=require('../.test-build/vessels.js');
+test('importação exige uma das duas embarcações e mantém o vínculo na consulta',()=>{
+ for(const vessel of VESSELS){
+  assert.equal(validateVessel(vessel),vessel);
+  const [group]=recipientGroups(require('../.test-build/control.js').tripRows({id:'M1',vessel,rows:[{id:'C1',client:'Cliente',freight:100,payments:[],city:'GURUPA'}]}));
+  assert.equal(group.vessel,vessel);
+ }
+ for(const value of ['',null,undefined,'OUTRA EMBARCAÇÃO'])assert.throws(()=>validateVessel(value),/Selecione a embarcação/);
+});

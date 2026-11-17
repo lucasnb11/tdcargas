@@ -1,6 +1,6 @@
 export const paid = (row: any): number => row.payments.reduce((sum: number, payment: any) => sum + payment.amount, 0);
 export const status = (row: any): string => paid(row) >= row.freight ? 'Pago' : paid(row) > 0 ? 'Parcial' : 'Pendente';
-export const tripRows = (manifest: any): any[] => (manifest?.rows || []).map((row: any) => ({...row, manifestId: manifest.id, tripRoute: manifest.route, tripDate: manifest.date}));
+export const tripRows = (manifest: any): any[] => (manifest?.rows || []).map((row: any) => ({...row, manifestId: manifest.id, tripRoute: manifest.route, tripDate: manifest.date, tripVessel: manifest.vessel}));
 export const pendingRows = (manifests: any[]): any[] => manifests.flatMap(tripRows).filter(row => row.freight - paid(row) > 0);
 export function tripSummary(manifest: any) {
  const rows = tripRows(manifest);
@@ -27,7 +27,7 @@ export function recipientGroups(rows: any[]) {
  for (const row of rows) {
   const recipientKey = String(row.client).trim().replace(/\s+/g,' ').toLocaleUpperCase('pt-BR');
   const key = JSON.stringify([row.manifestId,recipientKey]);
-  const group = groups.get(key) || {key, recipientKey, client:row.client, manifestId:row.manifestId, tripDate:row.tripDate, rows:[], freight:0, received:0, balance:0, cities:new Set<string>(), conferenceCount:0};
+  const group = groups.get(key) || {key, recipientKey, client:row.client, manifestId:row.manifestId, tripDate:row.tripDate, vessel:row.tripVessel, rows:[], freight:0, received:0, balance:0, cities:new Set<string>(), conferenceCount:0};
   group.rows.push(row); group.freight+=row.freight; group.received+=paid(row); group.balance+=Math.max(0,row.freight-paid(row)); group.cities.add(row.city);
   if(row.conferences?.length)group.conferenceCount++;
   groups.set(key,group);

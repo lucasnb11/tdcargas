@@ -112,3 +112,7 @@ A lista principal agrupa os conhecimentos por destinatário dentro de cada manif
 Em telas até 760 px, as tabelas são apresentadas como cartões com rótulos. Destinatários e conhecimentos usam os mesmos dados e ações do desktop. Nomes completos podem ocupar várias linhas, e os botões de pagamento e histórico ficam abaixo dos valores. Filtros, seleção de manifesto e janelas se ajustam à largura disponível.
 
 A tela do destinatário possui resumo de valores, ações individuais por conhecimento e Voltar aos destinatários. O retorno preserva o manifesto e os filtros da lista de origem. Após um pagamento, os valores são recarregados nessa mesma tela.
+
+## Embarcação do manifesto
+
+Ao conferir a importação do PDF, selecione F/B SÃO DOMINGOS V ou F/B DONA DOMINGAS antes de confirmar. A embarcação fica salva no manifesto, aparece nas consultas e acompanha a exportação CSV. Manifestos antigos sem esse campo aparecem como Embarcação não informada. Para instalação em outro banco, execute também `supabase/04_embarcacao.sql`, que inclui a embarcação na consulta dos entregadores sem alterar o filtro de cidade.
