@@ -126,3 +126,7 @@ Ao conferir a importação do PDF, selecione F/B SÃO DOMINGOS V ou F/B DONA DOM
 - Os pagamentos feitos pelo conhecimento, incluindo registros anteriores, são distribuídos na ordem das notas exibidas. Pagamentos feitos por uma nota permanecem vinculados a ela. Ambos reduzem o mesmo saldo do conhecimento e do manifesto.
 - A gravação do pagamento bloqueia o manifesto durante a operação e verifica novamente o saldo no banco. Notas com pagamentos individuais não podem ser alteradas. Repetir a importação de detalhes idênticos não duplica os registros.
 - Para outra instalação, execute `supabase/05_pagamentos_por_frete.sql` após as migrações anteriores. O filtro dos entregadores por cidade é preservado.
+
+## Pagar tudo do destinatário
+
+Na lista de conhecimentos da tela do destinatário, Pagar tudo abre uma confirmação com os saldos dos conhecimentos, total, data e forma de pagamento. A operação quita apenas os saldos desse destinatário no manifesto atual, respeitando a cidade do entregador e preservando os pagamentos anteriores. Toda a baixa ocorre em uma transação e cada conhecimento recebe seu próprio registro com identificador de lote. Se o saldo mudar antes da confirmação, é necessário conferir novamente. Para outra instalação, execute `supabase/06_pagar_destinatario.sql` após a migração 05.
