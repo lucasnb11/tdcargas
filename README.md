@@ -98,3 +98,7 @@ No Windows, copie `.env.example` para `.env.local` pelo Explorador ou pelo edito
 - Os pagamentos integrais e parciais continuam individuais; os totais do manifesto e do cliente são calculados a partir dos conhecimentos.
 - Para instalar esta atualização em outro banco, execute também `supabase/03_conhecimentos.sql`.
 - Validação local: `npm test`, `npm run typecheck` e `npm run build`.
+
+## Justificativas de pagamento parcial
+
+Ao selecionar Parcial, escolha Sem dinheiro, Acordo com administração, Pagamento parcelado ou Outros. O parcelamento exige a quantidade total de parcelas (inteiro a partir de 2); Outros exige descrição manual. O motivo e a quantidade informada ficam registrados no histórico e na exportação CSV, no campo de justificativa. Esta alteração registra a quantidade de parcelas, sem gerar vencimentos ou cobranças automáticas.

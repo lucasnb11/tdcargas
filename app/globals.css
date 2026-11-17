@@ -17,3 +17,4 @@
 .backupimport{cursor:pointer;display:inline-flex;align-items:center}
 
 .clientfilter{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 24px;background:#f4f8fa;border-bottom:1px solid #e5e9ed}.clientfilter button{margin-left:auto}.tableheading{flex-wrap:wrap;gap:12px}.tableheading>div:first-child{flex:1;min-width:240px}
+.partialreasons{border:0;padding:0;margin:18px 0;display:grid;gap:8px}.partialreasons legend{font-weight:600;margin-bottom:10px}.partialreasons label{display:flex;align-items:center;gap:10px;margin:0;padding:12px;border:1px solid #d8e1e8;border-radius:8px;cursor:pointer;background:#fff}.partialreasons label:has(input:checked){border-color:#176b73;background:#edf8f6}.partialreasons input[type=radio]{width:18px;height:18px;margin:0;flex-shrink:0;accent-color:#176b73}

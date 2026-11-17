@@ -26,3 +26,16 @@ test('pendências ficam limitadas ao manifesto selecionado, inclusive na ausênc
  assert.deepEqual(pendingRowsForManifest(manifests,''),[]);
  assert.deepEqual(pendingRowsForManifest(manifests,'inexistente'),[]);
 });
+
+const {PARTIAL_REASONS,partialPaymentNote}=require('../.test-build/payment.js');
+test('pagamento parcial exige um dos quatro motivos e detalhes conforme a escolha',()=>{
+ assert.equal(PARTIAL_REASONS.length,4);
+ assert.equal(partialPaymentNote('Sem dinheiro',null,'ignorar'),'Sem dinheiro');
+ assert.equal(partialPaymentNote('Acordo com administração',null,''),'Acordo com administração');
+ assert.equal(partialPaymentNote('Pagamento parcelado',3,''),'Pagamento parcelado em 3 vezes');
+ for(const n of [null,undefined,'3',0,1,2.5,NaN,Infinity])assert.throws(()=>partialPaymentNote('Pagamento parcelado',n,''),/parcelas/);
+ assert.equal(partialPaymentNote('Outros',null,'  Motivo combinado  '),'Outros: Motivo combinado');
+ assert.throws(()=>partialPaymentNote('Outros',null,'   '),/Descreva/);
+ assert.throws(()=>partialPaymentNote('Outros',null,'x'.repeat(1901)),/1900/);
+ for(const reason of ['',null,'Motivo livre'])assert.throws(()=>partialPaymentNote(reason,3,'texto'),/Selecione/);
+});

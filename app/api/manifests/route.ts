@@ -1,3 +1,4 @@
+import {partialPaymentNote} from '../../../lib/payment';
 import {getAccess} from '../../../lib/access';
 import {privateJson} from '../../../lib/private-json';
 import {createSupabase} from '../../../lib/supabase-server';
@@ -16,4 +17,4 @@ if(b.action==='add_knowledge'){
  if(error)throw Error(error.message);
  return privateJson({ok:true});
 }
-if(!['pay','conference'].includes(b.action))throw Error('Operação inválida.');if(b.action==='pay'&&b.type==='parcial'&&!Number.isSafeInteger(b.amount))throw Error('Valor inválido.');const {error}=await client.rpc('td_operar_manifesto',{p_manifest_id:b.manifestId,p_row_id:b.rowId,p_action:b.action,p_type:b.type||null,p_amount:b.amount??null,p_note:b.note||null,p_date:b.date||null,p_method:b.method||null});if(error)throw Error(error.message);return privateJson({ok:true});}catch(e:any){return privateJson({error:e.message||'Não foi possível salvar.'},{status:400});}}
+if(!['pay','conference'].includes(b.action))throw Error('Operação inválida.');if(b.action==='pay'&&b.type==='parcial'&&!Number.isSafeInteger(b.amount))throw Error('Valor inválido.');const {error}=await client.rpc('td_operar_manifesto',{p_manifest_id:b.manifestId,p_row_id:b.rowId,p_action:b.action,p_type:b.type||null,p_amount:b.amount??null,p_note:b.action==='pay'&&b.type==='parcial'?partialPaymentNote(b.reason,b.installments,b.note):null,p_date:b.date||null,p_method:b.method||null});if(error)throw Error(error.message);return privateJson({ok:true});}catch(e:any){return privateJson({error:e.message||'Não foi possível salvar.'},{status:400});}}
