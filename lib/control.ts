@@ -6,3 +6,15 @@ export function tripSummary(manifest: any) {
  const rows = tripRows(manifest);
  return {count: rows.length, total: rows.reduce((sum, row) => sum + row.freight, 0), received: rows.reduce((sum, row) => sum + paid(row), 0), balance: rows.reduce((sum, row) => sum + Math.max(0, row.freight - paid(row)), 0), pendingCount: rows.filter(row => row.freight > paid(row)).length};
 }
+
+export function clientSummary(manifests: any[]) {
+ const groups = new Map<string, any>();
+ for (const row of manifests.flatMap(tripRows)) {
+  const key = String(row.client).trim().replace(/\s+/g,' ').toLocaleUpperCase('pt-BR');
+  const group = groups.get(key) || {key, name: row.client, rows: [], manifestIds: new Set<string>(), total: 0, received: 0, balance: 0};
+  group.rows.push(row); group.manifestIds.add(row.manifestId);
+  group.total += row.freight; group.received += paid(row); group.balance += Math.max(0,row.freight-paid(row));
+  groups.set(key,group);
+ }
+ return [...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+}

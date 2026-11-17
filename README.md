@@ -88,3 +88,13 @@ No Windows, copie `.env.example` para `.env.local` pelo Explorador ou pelo edito
 - `public/`: ícone e worker do leitor de PDF.
 - `.env.example`: nomes das configurações necessárias.
 - `package.json`, `package-lock.json`, `vercel.json`: instalação e publicação.
+
+## Conhecimentos e clientes pagadores
+
+- Em **Conhecimentos**, consulte todos os manifestos, filtre por cliente, destino ou situação e exporte o resultado.
+- Em **Novo conhecimento**, selecione um manifesto existente e informe número, cliente pagador, destino, tipo, volumes e frete. O vínculo ao manifesto é obrigatório.
+- O número não pode se repetir no mesmo manifesto. Somente administradores cadastram conhecimentos.
+- **Clientes pagadores** reúne os conhecimentos e saldos por nome de cliente entre manifestos. Use o mesmo nome para manter o agrupamento; não há identificação por CPF/CNPJ nesta versão.
+- Os pagamentos integrais e parciais continuam individuais; os totais do manifesto e do cliente são calculados a partir dos conhecimentos.
+- Para instalar esta atualização em outro banco, execute também `supabase/03_conhecimentos.sql`.
+- Validação local: `npm test`, `npm run typecheck` e `npm run build`.

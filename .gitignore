@@ -6,3 +6,4 @@ node_modules/
 *.tsbuildinfo
 *.log
 TD_Cargas_Backup_*.json
+.test-build/

@@ -15,3 +15,5 @@
 .headingactions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 
 .backupimport{cursor:pointer;display:inline-flex;align-items:center}
+
+.clientfilter{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 24px;background:#f4f8fa;border-bottom:1px solid #e5e9ed}.clientfilter button{margin-left:auto}.tableheading{flex-wrap:wrap;gap:12px}.tableheading>div:first-child{flex:1;min-width:240px}
