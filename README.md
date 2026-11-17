@@ -102,3 +102,7 @@ No Windows, copie `.env.example` para `.env.local` pelo Explorador ou pelo edito
 ## Justificativas de pagamento parcial
 
 Ao selecionar Parcial, escolha Sem dinheiro, Acordo com administração, Pagamento parcelado ou Outros. O parcelamento exige a quantidade total de parcelas (inteiro a partir de 2); Outros exige descrição manual. O motivo e a quantidade informada ficam registrados no histórico e na exportação CSV, no campo de justificativa. Esta alteração registra a quantidade de parcelas, sem gerar vencimentos ou cobranças automáticas.
+
+## Destinatários por manifesto
+
+A lista principal agrupa os conhecimentos por destinatário dentro de cada manifesto. Clique no nome ou em Ver conhecimentos para expandir os documentos individuais. Nessa área ficam Conferir carga, Registrar pagamento / Dar baixa e, para administradores, Ver histórico. Cada pagamento mantém o vínculo ao conhecimento original e suas justificativas. A consulta de pendências mostra destinatários com saldo no manifesto selecionado; ao expandir, são mostrados todos os conhecimentos daquele destinatário no mesmo manifesto, inclusive os quitados. A exportação continua respeitando os filtros por conhecimento.

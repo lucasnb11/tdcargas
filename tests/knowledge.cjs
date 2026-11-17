@@ -39,3 +39,21 @@ test('pagamento parcial exige um dos quatro motivos e detalhes conforme a escolh
  assert.throws(()=>partialPaymentNote('Outros',null,'x'.repeat(1901)),/1900/);
  for(const reason of ['',null,'Motivo livre'])assert.throws(()=>partialPaymentNote(reason,3,'texto'),/Selecione/);
 });
+
+const {recipientGroups}=require('../.test-build/control.js');
+test('agrupa destinatário dentro do manifesto, preservando conhecimentos e pagamentos individuais',()=>{
+ const rows=[
+  {id:'C1',manifestId:'M1',client:' Cliente A ',city:'GURUPA',freight:10000,payments:[{amount:2500}],conferences:[]},
+  {id:'C2',manifestId:'M1',client:'CLIENTE A',city:'ALMEIRIM',freight:5000,payments:[{amount:5000}],conferences:[{operator:'Teste'}]},
+  {id:'C1',manifestId:'M2',client:'Cliente A',city:'GURUPA',freight:3000,payments:[],conferences:[]},
+  {id:'C3',manifestId:'M1',client:'Cliente B',city:'GURUPA',freight:8000,payments:[],conferences:[]}
+ ];
+ const groups=recipientGroups(rows);
+ assert.equal(groups.length,3);
+ const group=groups.find(g=>g.manifestId==='M1'&&g.recipientKey==='CLIENTE A');
+ assert.deepEqual(group.rows.map(r=>r.id),['C1','C2']);
+ assert.equal(group.freight,15000);assert.equal(group.received,7500);assert.equal(group.balance,7500);assert.equal(group.conferenceCount,1);
+ assert.deepEqual([...group.cities],['GURUPA','ALMEIRIM']);
+ assert.equal(group.rows[0],rows[0]);assert.equal(group.rows[0].payments.length,1);
+ assert.deepEqual(recipientGroups([]),[]);
+});
