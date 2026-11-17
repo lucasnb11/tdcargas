@@ -18,3 +18,5 @@ export function clientSummary(manifests: any[]) {
  }
  return [...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
 }
+
+export const pendingRowsForManifest = (manifests: any[], manifestId: string): any[] => pendingRows(manifests.filter(manifest => manifest.id === manifestId));

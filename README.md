@@ -57,7 +57,7 @@ O backup contém informações de clientes e recebimentos. Não o envie ao GitHu
 - Entregador: apenas as cargas da cidade vinculada, conferência e baixa.
 - Pagamento parcial exige justificativa. A confirmação fica registrada com o usuário autenticado.
 - Gerar QR Code não confirma um pagamento; confira o recebimento antes da baixa.
-- Os manifestos permanecem separados por viagem. A visão consolidada contém somente saldos em aberto.
+- Os manifestos permanecem separados por viagem. A tela Pendências de pagamento exige uma viagem / manifesto selecionado e mostra somente seus saldos em aberto. A troca de manifesto também filtra o resumo e a exportação CSV.
 - Em **Cidades → Nova cidade**, novos destinos ficam disponíveis para os usuários e a importação.
 
 ## Desenvolvimento local

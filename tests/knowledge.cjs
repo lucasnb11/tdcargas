@@ -1,7 +1,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {validateKnowledge}=require('../.test-build/knowledge.js');
-const {clientSummary,tripSummary}=require('../.test-build/control.js');
+const {clientSummary,tripSummary,pendingRowsForManifest}=require('../.test-build/control.js');
 const valid={id:' CT-001 ',client:' Cliente A ',city:'Gurupá',kind:'FOB',volumes:2,freight:15000};
 test('conhecimento exige manifesto e dados válidos',()=>{
  assert.throws(()=>validateKnowledge('',valid,['GURUPA']),/manifesto/);
@@ -15,4 +15,14 @@ test('saldo por cliente e manifesto preserva conhecimentos pagos e parciais',()=
  assert.equal(client.manifestIds.size,2);assert.equal(client.rows.length,3);
  assert.equal(client.total,45000);assert.equal(client.received,15000);assert.equal(client.balance,30000);
  assert.deepEqual(tripSummary(first),{count:2,total:35000,received:5000,balance:30000,pendingCount:2});
+});
+
+test('pendências ficam limitadas ao manifesto selecionado, inclusive na ausência de saldo',()=>{
+ const row=(id,freight,payments=[])=>({id,client:'Cliente A',freight,payments});
+ const manifests=[{id:'M1',rows:[row('C1',10000),row('C2',20000,[{amount:5000}]),row('C3',1000,[{amount:1000}])]},{id:'M2',rows:[row('C4',7000)]},{id:'M3',rows:[row('C5',8000,[{amount:8000}])]}];
+ assert.deepEqual(pendingRowsForManifest(manifests,'M1').map(r=>r.id),['C1','C2']);
+ assert.deepEqual(pendingRowsForManifest(manifests,'M2').map(r=>r.id),['C4']);
+ assert.deepEqual(pendingRowsForManifest(manifests,'M3'),[]);
+ assert.deepEqual(pendingRowsForManifest(manifests,''),[]);
+ assert.deepEqual(pendingRowsForManifest(manifests,'inexistente'),[]);
 });
