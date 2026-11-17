@@ -1,0 +1,41 @@
+import {validateFreights,FreightItem} from './freights';
+const money=(value:string)=>Math.round(Number(value.replace(/\./g,'').replace(',','.'))*100);
+export function parseFreightDocuments(text:string,manifests:any[]){
+ const records:any[]=[],errors:string[]=[];
+ const starts=[...text.matchAll(/(?:^|\n)Conhecimento[^\n]*\n\s*(\d{6}\/\d{4})/gi)];
+ if(!starts.length)throw Error('Não foi possível reconhecer os conhecimentos no PDF.');
+ const grouped=new Map<string,any>();
+ starts.forEach((match,index)=>{
+  const block=text.slice(match.index,starts[index+1]?.index??text.length),rowId=match[1];
+  const manifestId=block.match(/Viagem\s*\n\s*(\d{6}\/\d{4})/i)?.[1];
+  if(!manifestId){errors.push(`Conhecimento ${rowId}: viagem não identificada.`);return;}
+  const expectedCount=block.match(/QTD\s+de\s+Fretes\s*:\s*(\d+)/i)?.[1];
+  const totalText=block.match(/QTD\s+de\s+Fretes[^\n]*\bFrete\s*:\s*([\d.]+,\d{2})/i)?.[1];
+  const key=JSON.stringify([manifestId,rowId]);
+  const document=grouped.get(key)||{manifestId,rowId,items:[],expectedCount:undefined,total:undefined};
+  if(expectedCount)document.expectedCount=Number(expectedCount);
+  if(totalText)document.total=money(totalText);
+  for(const raw of block.split('\n')){
+   const line=raw.trim();
+   const item=line.match(/^(\d{4,})\s+(.+?)\s+([\w./-]+)\s+([\d.]+,\d{2})\s+(\d+)\s+([\d.,]+)\s+(.+?)\s+([\d.]+,\d{2})\s*$/);
+   if(!item)continue;
+   const value:FreightItem={id:`${item[1]}:${item[3]}`,tracking:item[1],sender:item[2],noteNumber:item[3],volumes:Number(item[5]),freight:money(item[8])};
+   const existing=document.items.find((i:FreightItem)=>i.id===value.id);
+   if(existing&&JSON.stringify(existing)!==JSON.stringify(value))document.conflict=true;
+   if(!existing)document.items.push(value);
+  }
+  grouped.set(key,document);
+ });
+ for(const document of grouped.values()){
+  try{
+   if(document.conflict)throw Error('há dados divergentes para a mesma nota no PDF');
+   const manifest=manifests.find(m=>m.id===document.manifestId),row=manifest?.rows.find((r:any)=>r.id===document.rowId);
+   if(!row)throw Error('importe primeiro o manifesto que contém esse conhecimento');
+   if(!document.expectedCount||document.items.length!==document.expectedCount)throw Error('a quantidade de fretes extraída não confere com o documento');
+   if(document.total!==row.freight)throw Error('o frete do PDF diverge do manifesto');
+   const items=validateFreights(document.items,row.freight);
+   records.push({manifestId:document.manifestId,rowId:document.rowId,client:row.client,items});
+  }catch(e:any){errors.push(`Conhecimento ${document.rowId} / viagem ${document.manifestId}: ${e.message}.`);}
+ }
+ return {records,errors};
+}

@@ -1,3 +1,4 @@
+import {validateFreights} from '../../../lib/freights';
 import {validateVessel} from '../../../lib/vessels';
 import {partialPaymentNote} from '../../../lib/payment';
 import {getAccess} from '../../../lib/access';
@@ -18,4 +19,16 @@ if(b.action==='add_knowledge'){
  if(error)throw Error(error.message);
  return privateJson({ok:true});
 }
-if(!['pay','conference'].includes(b.action))throw Error('Operação inválida.');if(b.action==='pay'&&b.type==='parcial'&&!Number.isSafeInteger(b.amount))throw Error('Valor inválido.');const {error}=await client.rpc('td_operar_manifesto',{p_manifest_id:b.manifestId,p_row_id:b.rowId,p_action:b.action,p_type:b.type||null,p_amount:b.amount??null,p_note:b.action==='pay'&&b.type==='parcial'?partialPaymentNote(b.reason,b.installments,b.note):null,p_date:b.date||null,p_method:b.method||null});if(error)throw Error(error.message);return privateJson({ok:true});}catch(e:any){return privateJson({error:e.message||'Não foi possível salvar.'},{status:400});}}
+if(b.action==='save_freights'){
+ if(user.role!=='admin')return privateJson({error:'Apenas administradores podem vincular notas/fretes.'},{status:403});
+ if(!Array.isArray(b.documents)||!b.documents.length||b.documents.length>1000)throw Error('Importação de notas/fretes inválida.');
+ const manifests=await loadManifests();
+ const documents=b.documents.map((d:any)=>{const row=manifests.find(m=>m.id===d.manifestId)?.rows.find((r:any)=>r.id===d.rowId);if(!row)throw Error('Conhecimento não encontrado no manifesto.');return {manifestId:d.manifestId,rowId:d.rowId,items:validateFreights(d.items,row.freight)};});
+ const {data,error}=await client.rpc('td_salvar_fretes',{p_documents:documents});if(error)throw Error(error.message);return privateJson(data);
+}
+if(b.action==='pay'){
+ if(b.type==='parcial'&&!Number.isSafeInteger(b.amount))throw Error('Valor inválido.');
+ if(b.freightId!==undefined&&(typeof b.freightId!=='string'||!b.freightId||b.freightId.length>120))throw Error('Nota/frete inválido.');
+ const {error}=await client.rpc('td_registrar_pagamento',{p_manifest_id:b.manifestId,p_row_id:b.rowId,p_freight_id:b.freightId||null,p_type:b.type||null,p_amount:b.amount??null,p_note:b.type==='parcial'?partialPaymentNote(b.reason,b.installments,b.note):null,p_date:b.date||null,p_method:b.method||null});if(error)throw Error(error.message);return privateJson({ok:true});
+}
+if(b.action!=='conference')throw Error('Operação inválida.');const {error}=await client.rpc('td_operar_manifesto',{p_manifest_id:b.manifestId,p_row_id:b.rowId,p_action:'conference',p_type:null,p_amount:null,p_note:null,p_date:null,p_method:null});if(error)throw Error(error.message);return privateJson({ok:true});}catch(e:any){return privateJson({error:e.message||'Não foi possível salvar.'},{status:400});}}

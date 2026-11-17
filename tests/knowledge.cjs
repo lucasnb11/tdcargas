@@ -67,3 +67,42 @@ test('importação exige uma das duas embarcações e mantém o vínculo na cons
  }
  for(const value of ['',null,undefined,'OUTRA EMBARCAÇÃO'])assert.throws(()=>validateVessel(value),/Selecione a embarcação/);
 });
+
+const {validateFreights,freightBalances,freightPaymentRow}=require('../.test-build/freights.js');
+const sampleFreights=[{id:'r1:n1',noteNumber:'n1',tracking:'r1',sender:'Exemplo A',volumes:1,freight:2000},{id:'r2:n2',noteNumber:'n2',tracking:'r2',sender:'Exemplo B',volumes:2,freight:3000},{id:'r3:n3',noteNumber:'n3',tracking:'r3',sender:'Exemplo C',volumes:3,freight:5000}];
+test('pagamentos por conhecimento e por nota compartilham o mesmo saldo sem duplicação',()=>{
+ const row={id:'C1',freight:10000,freights:sampleFreights,payments:[{amount:500,freightId:'r2:n2'},{amount:2500},{amount:2000,freightId:'r2:n2'}]};
+ const items=freightBalances(row);
+ assert.deepEqual(items.map(i=>i.received),[2000,3000,0]);
+ assert.deepEqual(items.map(i=>i.balance),[0,0,5000]);
+ assert.equal(items.reduce((s,i)=>s+i.received,0),5000);
+ const final=freightBalances({...row,payments:[...row.payments,{amount:5000}]});
+ assert.equal(final.reduce((s,i)=>s+i.balance,0),0);
+ const target=freightPaymentRow(row,items[2]);assert.equal(target.id,'C1');assert.equal(target.freightId,'r3:n3');assert.equal(target.freight,5000);
+ assert.equal(sampleFreights[0].received,undefined);
+});
+test('pagamentos antigos são distribuídos por ordem e notas inválidas são recusadas',()=>{
+ assert.deepEqual(freightBalances({freight:10000,freights:sampleFreights,payments:[{amount:3500}]}).map(i=>i.received),[2000,1500,0]);
+ assert.throws(()=>validateFreights(sampleFreights,9999),/soma/);
+ assert.throws(()=>validateFreights([sampleFreights[0],sampleFreights[0]],4000),/duplicados/);
+ assert.throws(()=>freightBalances({freight:10000,freights:sampleFreights,payments:[{amount:3000,freightId:'r1:n1'}]}),/excedem/);
+ assert.throws(()=>freightBalances({freight:10000,freights:sampleFreights,payments:[{amount:100,freightId:'inexistente'}]}),/não encontrado/);
+});
+const {parseFreightDocuments}=require('../.test-build/freight-parser.js');
+const freightDoc=`Conhecimento Usuario Ultima Alteracao
+000001/2026 OPERADOR 17/11/2026 09:00
+Viagem
+000099/2026 13/11/2026 18:00 F/B EXEMPLO
+QTD de Fretes: 3 Vencimento: 19/11/2026 Frete: 100,00
+10001 REMETENTE A 123 500,00 1 0 ESTIVAS 20,00
+10002 REMETENTE B 124 600,00 2 0 ESTIVAS 30,00
+10003 REMETENTE C 125 700,00 3 0 ESTIVAS 50,00`;
+const manifestsForFreights=[{id:'000099/2026',rows:[{id:'000001/2026',client:'Destinatário de exemplo',freight:10000}]}];
+test('leitura de notas exige viagem, conhecimento, quantidade e soma corretos',()=>{
+ const parsed=parseFreightDocuments(freightDoc,manifestsForFreights);assert.equal(parsed.errors.length,0);assert.equal(parsed.records.length,1);assert.equal(parsed.records[0].items.length,3);
+ assert.equal(parseFreightDocuments(freightDoc.replace('50,00','51,00'),manifestsForFreights).records.length,0);
+ assert.equal(parseFreightDocuments(freightDoc.replace('Fretes: 3','Fretes: 4'),manifestsForFreights).records.length,0);
+ assert.equal(parseFreightDocuments(freightDoc,[]).records.length,0);
+ assert.equal(parseFreightDocuments(freightDoc+'\n'+freightDoc,manifestsForFreights).records.length,1);
+ assert.throws(()=>parseFreightDocuments('arquivo irreconhecível',[]),/reconhecer/);
+});

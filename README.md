@@ -116,3 +116,13 @@ A tela do destinatário possui resumo de valores, ações individuais por conhec
 ## Embarcação do manifesto
 
 Ao conferir a importação do PDF, selecione F/B SÃO DOMINGOS V ou F/B DONA DOMINGAS antes de confirmar. A embarcação fica salva no manifesto, aparece nas consultas e acompanha a exportação CSV. Manifestos antigos sem esse campo aparecem como Embarcação não informada. Para instalação em outro banco, execute também `supabase/04_embarcacao.sql`, que inclui a embarcação na consulta dos entregadores sem alterar o filtro de cidade.
+
+## Pagamentos por conhecimento ou nota/frete
+
+- A tela do destinatário permite **Pagar conhecimento** e **Notas/fretes**. Cada nota mostra frete, recebido e saldo, com pagamento integral ou parcial e as quatro justificativas já existentes.
+- O administrador pode cadastrar as notas manualmente ou usar **Viagens e manifestos → Importar notas/fretes** com o PDF dos conhecimentos individuais (até 50 MB / 500 páginas). A leitura usa texto quando disponível e OCR no próprio dispositivo para páginas digitalizadas. Bibliotecas e dados de reconhecimento são baixados de CDNs públicas; as páginas são processadas localmente.
+- A prévia lista os conhecimentos reconhecidos e as pendências de leitura. O usuário deve conferir e confirmar os dados antes de salvar. OCR pode exigir correções manuais. Somente os conhecimentos com número de viagem, quantidade e soma de fretes coerentes são oferecidos para vínculo.
+- A soma dos fretes de cada conhecimento deve coincidir exatamente com o valor do manifesto. As notas são vinculadas aos números da viagem e do conhecimento, sem criar outra cobrança.
+- Os pagamentos feitos pelo conhecimento, incluindo registros anteriores, são distribuídos na ordem das notas exibidas. Pagamentos feitos por uma nota permanecem vinculados a ela. Ambos reduzem o mesmo saldo do conhecimento e do manifesto.
+- A gravação do pagamento bloqueia o manifesto durante a operação e verifica novamente o saldo no banco. Notas com pagamentos individuais não podem ser alteradas. Repetir a importação de detalhes idênticos não duplica os registros.
+- Para outra instalação, execute `supabase/05_pagamentos_por_frete.sql` após as migrações anteriores. O filtro dos entregadores por cidade é preservado.
