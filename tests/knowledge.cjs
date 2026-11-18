@@ -161,3 +161,11 @@ test('peças de notas integralmente pagas são reconhecidas sem proporcionalizar
  const unknown=dashboardData([{id:'M1',rows:[{...row,volumes:undefined,freights:[]}]}],{role:'entregador',city:'GURUPA'}).summary;
  assert.equal(unknown.unknownVolumesCount,1);assert.equal(unknown.piecesCount,0);
 });
+
+test('dashboard administrador combina cidade e viagem inclusive no resumo por cidade',()=>{
+ const manifests=[{id:'A',rows:[{id:'1',city:'GURUPA',freight:1000,volumes:2,payments:[]},{id:'2',city:'ALMEIRIM',freight:2000,volumes:3,payments:[]}]},{id:'B',rows:[{id:'3',city:'GURUPA',freight:4000,volumes:4,payments:[]}]}];
+ const trip=dashboardData(manifests,{role:'admin'},'','A');assert.equal(trip.summary.count,2);assert.equal(trip.summary.freight,3000);assert.equal(trip.cities.reduce((sum,city)=>sum+city.freight,0),3000);
+ const combined=dashboardData(manifests,{role:'admin'},'GURUPA','A');assert.equal(combined.summary.count,1);assert.equal(combined.summary.freight,1000);assert.equal(combined.cities.find(city=>city.key==='GURUPA').freight,1000);
+ assert.equal(dashboardData(manifests,{role:'admin'},'ALMEIRIM','B').summary.count,0);
+ assert.equal(dashboardData(manifests,{role:'admin'},'GURUPA').summary.freight,5000);
+});

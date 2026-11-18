@@ -26,7 +26,7 @@ export function dashboardData(manifests:any[],user:DashboardUser,cityFilter='',m
  const selected=user.role==='admin'?cityFilter:normalizeCity(user.city);
  const rows=scopeRows.filter(row=>(!selected||dashboardCityKey(row.city)===dashboardCityKey(selected))&&(!manifestFilter||row.manifestId===manifestFilter));
  const groups=new Map<string,{key:string;name:string;rows:any[]}>();
- for(const row of scopeRows){const key=dashboardCityKey(row.city);const group:{key:string;name:string;rows:any[]}=groups.get(key)||{key,name:String(row.city||'Cidade não informada'),rows:[]};group.rows.push(row);groups.set(key,group);}
+ for(const row of scopeRows.filter(row=>!manifestFilter||row.manifestId===manifestFilter)){const key=dashboardCityKey(row.city);const group:{key:string;name:string;rows:any[]}=groups.get(key)||{key,name:String(row.city||'Cidade não informada'),rows:[]};group.rows.push(row);groups.set(key,group);}
  const cities=[...groups.values()].map(group=>({key:group.key,name:group.name,...summarizeDashboard(group.rows)})).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
  return {rows,summary:summarizeDashboard(rows),cities};
 }
