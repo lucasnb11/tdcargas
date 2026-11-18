@@ -143,3 +143,21 @@ test('dashboard consolida valores e quantidades sem duplicar pagamentos de notas
  assert.equal(dashboardData(manifests,{role:'admin'},'SEM DADOS').summary.count,0);
  assert.equal(dashboardData([],{role:'admin'}).summary.receivedPercent,0);
 });
+
+test('pizza do entregador soma volumes e filtra viagem sem acessar outra cidade',()=>{
+ const manifests=[{id:'M1',rows:[{id:'C1',city:'GURUPA',volumes:10,freight:10000,payments:[{amount:10000}]},{id:'C2',city:'Gurupá',volumes:20,freight:20000,payments:[{amount:5000}]},{id:'C3',city:'ALMEIRIM',volumes:900,freight:20000,payments:[]}]},{id:'M2',rows:[{id:'C4',city:'GURUPA',volumes:7,freight:7000,payments:[]}]},{id:'M3',rows:[{id:'C5',city:'ALMEIRIM',volumes:100,freight:5000,payments:[]}]}];
+ const user={role:'entregador',city:'GURUPA'};
+ const all=dashboardData(manifests,user).summary;assert.equal(all.piecesCount,37);assert.equal(all.paidPieces,10);assert.equal(all.pendingPieces,27);
+ const trip=dashboardData(manifests,user,'','M1').summary;assert.equal(trip.piecesCount,30);assert.equal(trip.paidPieces,10);assert.equal(trip.pendingPieces,20);
+ assert.equal(dashboardData(manifests,user,'','M2').summary.piecesCount,7);
+ assert.equal(dashboardData(manifests,user,'','M3').summary.piecesCount,0);
+ assert.equal(dashboardData(manifests,user,'','inexistente').summary.piecesCount,0);
+ assert.equal(dashboardData(manifests,{role:'admin'}).summary.count,5);
+});
+test('peças de notas integralmente pagas são reconhecidas sem proporcionalizar pagamentos parciais',()=>{
+ const row={id:'C1',city:'GURUPA',volumes:6,freight:10000,freights:sampleFreights,payments:[{amount:2000,freightId:'r1:n1'},{amount:1000,freightId:'r2:n2'}]};
+ const result=dashboardData([{id:'M1',rows:[row]}],{role:'entregador',city:'GURUPA'}).summary;
+ assert.equal(result.piecesCount,6);assert.equal(result.paidPieces,1);assert.equal(result.pendingPieces,5);
+ const unknown=dashboardData([{id:'M1',rows:[{...row,volumes:undefined,freights:[]}]}],{role:'entregador',city:'GURUPA'}).summary;
+ assert.equal(unknown.unknownVolumesCount,1);assert.equal(unknown.piecesCount,0);
+});

@@ -1,151 +1,39 @@
-# TD Cargas — Publicar no GitHub e na Vercel
-
-Sistema web em português, com identidade azul (#0B315A) e laranja (#F58220), login Supabase, acesso por cidade, manifestos por viagem, conferência, recebimentos, Pix e backup.
-
-## 1. Preparar o Supabase
-
-Este pacote usa o Supabase para os usuários E para os dados. Os dados da versão hospedada anteriormente não são transferidos apenas ao publicar o código.
-
-1. Abra o projeto Supabase que já utiliza. O projeto atual chama-se **recebimento-cargas**, ref `bdmogkdnhvstcgfuxznz`.
-2. No **SQL Editor**, execute o conteúdo de `supabase/01_instalacao.sql`.
-3. O script preserva as contas e perfis existentes e cria as tabelas `td_manifestos`, `td_cidades` e `td_config_pagamento`, além das permissões de acesso.
-4. Em um projeto novo, crie o usuário administrador em **Authentication → Users** e execute `supabase/02_primeiro_admin.sql` após substituir o e-mail. No projeto atual, sua conta de administrador já existe.
-5. A função `manifestos-create-city-user` já está publicada no projeto atual. Em outro projeto, publique a pasta `supabase/functions/manifestos-create-city-user` com esse nome, mantendo a verificação JWT ativada. O código está incluído no pacote. As variáveis `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` são disponibilizadas pelo ambiente das Edge Functions. A chave privilegiada fica somente na função, nunca na Vercel ou no navegador.
-
-## 2. Subir para o GitHub
-
-1. Extraia este ZIP.
-2. Crie um repositório no GitHub e envie os arquivos da pasta `td-cargas-vercel` diretamente para a raiz do repositório.
-3. Inclua os arquivos de configuração, como `.gitignore` e `.env.example`.
-4. Não envie `node_modules`, `.next`, arquivos `.env.local` nem backups operacionais.
-
-O pacote não contém senhas, chaves reais, sessões, PDFs de clientes nem dados operacionais. O worker local do PDF é uma dependência necessária para ler os manifestos.
-
-## 3. Publicar na Vercel
-
-1. Na Vercel, selecione **Add New → Project** e importe o repositório do GitHub.
-2. Framework: **Next.js**. Root Directory: a pasta que contém `package.json` (normalmente a raiz).
-3. Em **Environment Variables**, cadastre para Production e Preview:
-
-| Variável | Valor |
-| --- | --- |
-| `SUPABASE_URL` | URL do seu projeto Supabase |
-| `SUPABASE_PUBLISHABLE_KEY` | Chave Publishable do mesmo projeto |
-
-Copie os valores no painel do Supabase. Use somente a chave publicável; não configure `service_role` neste aplicativo.
-
-4. Node.js: **22.x**. O arquivo `vercel.json` configura instalação (`npm ci`) e build (`npm run build`).
-5. Clique em **Deploy**. O login do sistema é por e-mail e senha do Supabase; não depende do login do ChatGPT.
-6. Após a publicação, entre como administrador e confirme as cidades e os perfis.
-
-Referências oficiais: https://vercel.com/docs/frameworks/full-stack/nextjs e https://vercel.com/docs/environment-variables
-
-## 4. Migrar os dados da versão anterior
-
-1. Entre como administrador na versão anterior do sistema.
-2. Em **Viagens e manifestos**, clique em **Exportar backup**. Guarde o arquivo JSON em local protegido.
-3. Na nova versão da Vercel, entre como administrador e clique em **Importar backup** na mesma tela.
-4. A importação mantém manifestos, pagamentos, conferências, cidades cadastradas e a configuração Pix. Registros com IDs já existentes são preservados, sem sobrescrita.
-5. O limite por importação é **3 MB**. Em backups maiores, divida os manifestos em mais de um arquivo JSON, mantendo `format`, `version`, `cities` e `settings`.
-6. Usuários e senhas não fazem parte do backup: permanecem no Supabase Auth. Usando o mesmo projeto, os perfis também continuam disponíveis.
-
-O backup contém informações de clientes e recebimentos. Não o envie ao GitHub.
-
-## 5. Conferir a operação
-
-- Administrador: todas as cidades, usuários, importação, financeiro e Pix.
-- Entregador: apenas as cargas da cidade vinculada, conferência e baixa.
-- Pagamento parcial exige justificativa. A confirmação fica registrada com o usuário autenticado.
-- Gerar QR Code não confirma um pagamento; confira o recebimento antes da baixa.
-- Os manifestos permanecem separados por viagem. A tela Pendências de pagamento exige uma viagem / manifesto selecionado e mostra somente seus saldos em aberto. A troca de manifesto também filtra o resumo e a exportação CSV.
-- Em **Cidades → Nova cidade**, novos destinos ficam disponíveis para os usuários e a importação.
-
-## Desenvolvimento local
-
-Requisitos: Node.js 22 e npm.
-
-```bash
-npm ci
-cp .env.example .env.local
-# Preencha .env.local com a URL e a Publishable Key do Supabase.
-npm run dev
-```
-
-Validações:
-
-```bash
-npm run typecheck
-npm run build
-```
-
-No Windows, copie `.env.example` para `.env.local` pelo Explorador ou pelo editor. Nunca publique `.env.local`.
-
-## Arquivos principais
-
-- `app/`: interface e rotas do servidor Next.js.
-- `lib/`: autenticação, dados, Pix, leitura de manifestos e regras de cidade.
-- `supabase/`: instalação SQL, administrador inicial e função de criação de contas.
-- `public/`: ícone e worker do leitor de PDF.
-- `.env.example`: nomes das configurações necessárias.
-- `package.json`, `package-lock.json`, `vercel.json`: instalação e publicação.
-
-## Conhecimentos e clientes pagadores
-
-- Em **Conhecimentos**, consulte todos os manifestos, filtre por cliente, destino ou situação e exporte o resultado.
-- Em **Novo conhecimento**, selecione um manifesto existente e informe número, cliente pagador, destino, tipo, volumes e frete. O vínculo ao manifesto é obrigatório.
-- O número não pode se repetir no mesmo manifesto. Somente administradores cadastram conhecimentos.
-- **Clientes pagadores** reúne os conhecimentos e saldos por nome de cliente entre manifestos. Use o mesmo nome para manter o agrupamento; não há identificação por CPF/CNPJ nesta versão.
-- Os pagamentos integrais e parciais continuam individuais; os totais do manifesto e do cliente são calculados a partir dos conhecimentos.
-- Para instalar esta atualização em outro banco, execute também `supabase/03_conhecimentos.sql`.
-- Validação local: `npm test`, `npm run typecheck` e `npm run build`.
-
-## Justificativas de pagamento parcial
-
-Ao selecionar Parcial, escolha Sem dinheiro, Acordo com administração, Pagamento parcelado ou Outros. O parcelamento exige a quantidade total de parcelas (inteiro a partir de 2); Outros exige descrição manual. O motivo e a quantidade informada ficam registrados no histórico e na exportação CSV, no campo de justificativa. Esta alteração registra a quantidade de parcelas, sem gerar vencimentos ou cobranças automáticas.
-
-## Destinatários por manifesto
-
-A lista principal agrupa os conhecimentos por destinatário dentro de cada manifesto. Clique no nome ou em Abrir destinatário para abrir uma tela própria com os documentos individuais. Nessa área ficam Conferir carga, Registrar pagamento / Dar baixa e, para administradores, Ver histórico. Cada pagamento mantém o vínculo ao conhecimento original e suas justificativas. A consulta de pendências mostra destinatários com saldo no manifesto selecionado; na tela do destinatário, são mostrados todos os conhecimentos daquele destinatário no mesmo manifesto, inclusive os quitados. A exportação continua respeitando os filtros por conhecimento.
-
-## Leitura em celular
-
-Em telas até 760 px, as tabelas são apresentadas como cartões com rótulos. Destinatários e conhecimentos usam os mesmos dados e ações do desktop. Nomes completos podem ocupar várias linhas, e os botões de pagamento e histórico ficam abaixo dos valores. Filtros, seleção de manifesto e janelas se ajustam à largura disponível.
-
-A tela do destinatário possui resumo de valores, ações individuais por conhecimento e Voltar aos destinatários. O retorno preserva o manifesto e os filtros da lista de origem. Após um pagamento, os valores são recarregados nessa mesma tela.
-
-## Embarcação do manifesto
-
-Ao conferir a importação do PDF, selecione F/B SÃO DOMINGOS V ou F/B DONA DOMINGAS antes de confirmar. A embarcação fica salva no manifesto, aparece nas consultas e acompanha a exportação CSV. Manifestos antigos sem esse campo aparecem como Embarcação não informada. Para instalação em outro banco, execute também `supabase/04_embarcacao.sql`, que inclui a embarcação na consulta dos entregadores sem alterar o filtro de cidade.
-
-## Pagamentos por conhecimento ou nota/frete
-
-- A tela do destinatário permite **Pagar conhecimento** e **Notas/fretes**. Cada nota mostra frete, recebido e saldo, com pagamento integral ou parcial e as quatro justificativas já existentes.
-- O administrador pode cadastrar as notas manualmente ou usar **Viagens e manifestos → Importar conhecimentos** com o PDF dos conhecimentos individuais (até 50 MB / 500 páginas). A leitura usa texto quando disponível e OCR no próprio dispositivo para páginas digitalizadas. Bibliotecas e dados de reconhecimento são baixados de CDNs públicas; as páginas são processadas localmente.
-- A prévia lista os conhecimentos reconhecidos e as pendências de leitura. O usuário deve conferir e confirmar os dados antes de salvar. OCR pode exigir correções manuais. Somente os conhecimentos com número de viagem, quantidade e soma de fretes coerentes são oferecidos para vínculo.
-- A soma dos fretes de cada conhecimento deve coincidir exatamente com o valor do manifesto. As notas são vinculadas aos números da viagem e do conhecimento, sem criar outra cobrança.
-- Os pagamentos feitos pelo conhecimento, incluindo registros anteriores, são distribuídos na ordem das notas exibidas. Pagamentos feitos por uma nota permanecem vinculados a ela. Ambos reduzem o mesmo saldo do conhecimento e do manifesto.
-- A gravação do pagamento bloqueia o manifesto durante a operação e verifica novamente o saldo no banco. Notas com pagamentos individuais não podem ser alteradas. Repetir a importação de detalhes idênticos não duplica os registros.
-- Para outra instalação, execute `supabase/05_pagamentos_por_frete.sql` após as migrações anteriores. O filtro dos entregadores por cidade é preservado.
-
-## Pagar tudo do destinatário
-
-Na lista de conhecimentos da tela do destinatário, Pagar tudo abre uma confirmação com os saldos dos conhecimentos, total, data e forma de pagamento. A operação quita apenas os saldos desse destinatário no manifesto atual, respeitando a cidade do entregador e preservando os pagamentos anteriores. Toda a baixa ocorre em uma transação e cada conhecimento recebe seu próprio registro com identificador de lote. Se o saldo mudar antes da confirmação, é necessário conferir novamente. Para outra instalação, execute `supabase/06_pagar_destinatario.sql` após a migração 05.
-
-## Importação em duas etapas
-
-1. Importe o manifesto, escolha a embarcação e confira os valores. O botão Confirmar e importar conhecimentos salva o manifesto.
-2. Assim que o manifesto é salvo, abre a tela Importar conhecimentos. O sistema informa o número salvo, explica a finalidade do segundo PDF e limita os vínculos a essa viagem.
-
-O botão Importar conhecimentos depois encerra a segunda etapa sem desfazer o manifesto. A importação pode ser retomada em Viagens e manifestos → Importar conhecimentos. Caso falhe apenas o recarregamento da lista após salvar o manifesto, os dados recém-conferidos continuam disponíveis para a leitura da segunda etapa; o salvamento final valida os vínculos novamente no servidor.
-
-## Dashboard por cidade
-
-A aba Dashboard reúne total de conhecimentos, cobranças quitadas, pendências (incluindo parciais), frete total, valor recebido e saldo a receber de todos os manifestos acessíveis. Os valores são somados a partir dos pagamentos do conhecimento; notas/fretes e baixas em lote não são contados novamente.
-
-Entregadores veem somente a cidade vinculada ao perfil, conforme a restrição aplicada pelo banco em `td_listar_manifestos`. A interface reforça esse escopo e não oferece seleção de outras cidades. Administradores veem o consolidado de todas as cidades, podem filtrar a seleção e consultar o resumo por cidade. O dashboard é atualizado ao abrir a aba, após recarregar os dados e pelo botão Atualizar dados.
-
-Cobrança realizada significa valor recebido registrado no sistema. Conhecimentos com recebimento parcial continuam entre as pendências até a quitação do saldo.
-
-### Dashboard dos entregadores em pizza
-
-Para entregadores, o dashboard usa somente dois gráficos de pizza: quantidade de conhecimentos (quitados e pendentes) e valores (recebido e saldo pendente), com o total e as legendas em cada gráfico. Pagamentos parciais entram no recebido e continuam pendentes até a quitação. A cidade continua sendo definida pelo perfil e pela restrição aplicada no servidor. O dashboard dos administradores mantém os indicadores e filtros existentes.
+'use client';
+import {useState} from 'react';
+import PieChart from './pie-chart';
+import {canAccessCity} from '../../lib/cities';
+import {departureDate,displayVessel} from '../../lib/vessels';
+import {Check,Clock,FileText,MapPin,Wallet,ArrowDownToLine} from 'lucide-react';
+import {dashboardData,DashboardUser} from '../../lib/dashboard';
+const brl=(value:number)=>(value/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const number=(value:number)=>value.toLocaleString('pt-BR');
+type Props={manifests:any[];user:DashboardUser;cityCatalog:any[];loading:boolean;onRefresh:()=>void};
+export default function Dashboard({manifests,user,cityCatalog,loading,onRefresh}:Props){
+ const [city,setCity]=useState(''),[trip,setTrip]=useState('');const isAdmin=user.role==='admin';
+ const {summary,cities}=dashboardData(manifests,user,city,isAdmin?'':trip);
+ const options=new Map<string,string>();
+ if(isAdmin)for(const item of cityCatalog)options.set(item.key,item.name);
+ for(const item of cities)if(!options.has(item.key))options.set(item.key,item.name);
+ const nameOf=(key:string)=>options.get(key)||key;
+ const selectedName=isAdmin?(city?nameOf(city):'Todas as cidades'):(user.city||'Cidade não definida');
+ const visibleCities=city?cities.filter(item=>item.key===city):cities;
+ const availableTrips=manifests.filter(manifest=>manifest.rows.some((row:any)=>canAccessCity(user,row.city)));
+ if(!isAdmin)return <section className="dashboardpage deliverydashboard"><div className="eyebrow">DASHBOARD / {selectedName}</div><div className="heading"><div><h1>Dashboard de peças</h1><p>Quantidades de peças de {selectedName}, conforme os volumes dos manifestos.</p></div><button className="secondary" disabled={loading} onClick={onRefresh}>{loading?'Atualizando…':'Atualizar dados'}</button></div><div className="dashboardtripfilter"><label>Filtrar por viagem / manifesto<select aria-label="Filtrar dashboard por viagem" value={trip} onChange={e=>setTrip(e.target.value)}><option value="">Todas as viagens da minha cidade</option>{trip&&!availableTrips.some(manifest=>manifest.id===trip)&&<option value={trip}>Viagem {trip} — sem dados disponíveis</option>}{availableTrips.map(manifest=>{const departure=departureDate(manifest.date);return <option key={manifest.id} value={manifest.id}>Saída {departure.date}{departure.weekday?` · ${departure.weekday}`:''} · {displayVessel(manifest)} · Viagem {manifest.id}</option>})}</select></label></div><div className="deliverypies singlepie" aria-busy={loading}>
+  <PieChart title="Quantidade de peças" totalLabel={`Total: ${number(summary.piecesCount)} peças`} data={[{label:'Peças com cobrança quitada',value:summary.paidPieces,color:'#246649'},{label:'Peças pendentes',value:summary.pendingPieces,color:'#a64d08'}]} formatValue={value=>`${number(value)} peças`} footnote="Peças correspondem aos volumes do manifesto. A quitação considera cada nota/frete quando detalhada; nos demais casos, considera o conhecimento. Pagamentos parciais não são convertidos proporcionalmente em peças."/>
+ </div>{summary.unknownVolumesCount>0&&<p className="hint">{number(summary.unknownVolumesCount)} conhecimentos não possuem quantidade de peças informada e precisam de conferência.</p>}</section>;
+ const metrics=[
+  {label:'Total de conhecimentos',value:number(summary.count),detail:`${number(summary.manifestCount)} manifestos com dados`,icon:FileText},
+  {label:'Cobranças quitadas',value:number(summary.paidCount),detail:'Conhecimentos pagos integralmente',icon:Check},
+  {label:'Pendentes de pagamento',value:number(summary.pendingCount),detail:`Inclui ${number(summary.partialCount)} com pagamento parcial`,icon:Clock},
+  {label:'Frete total',value:brl(summary.freight),detail:'Valor total dos conhecimentos',icon:Wallet},
+  {label:'Cobrança realizada',value:brl(summary.received),detail:'Valor recebido, incluindo pagamentos parciais',icon:ArrowDownToLine},
+  {label:'Saldo a receber',value:brl(summary.balance),detail:'Valor que ainda falta receber',icon:Clock}
+ ];
+ return <section className="dashboardpage"><div className="eyebrow">FINANCEIRO / DASHBOARD</div><div className="heading"><div><h1>Dashboard</h1><p>Resumo de todos os manifestos disponíveis no seu acesso.</p></div><button className="secondary" disabled={loading} onClick={onRefresh}>{loading?'Atualizando…':'Atualizar dados'}</button></div>
+  <div className="dashboardfilters"><div className="dashboardcity"><MapPin size={20}/><div><small>{isAdmin?'Cidade selecionada':'Seu acesso'}</small><strong>{selectedName}</strong></div></div>{isAdmin&&<label>Filtrar por cidade<select aria-label="Filtrar dashboard por cidade" value={city} onChange={e=>setCity(e.target.value)}><option value="">Todas as cidades</option>{[...options].sort((a,b)=>a[1].localeCompare(b[1],'pt-BR')).map(([key,label])=><option value={key} key={key}>{label}</option>)}</select></label>}</div>
+  <div className="dashboardmetrics" aria-busy={loading}>{metrics.map((metric,index)=><article className={`dashboardmetric metric${index}`} key={metric.label}><div><span>{metric.label}</span><metric.icon size={18}/></div><strong>{metric.value}</strong><small>{metric.detail}</small></article>)}</div>
+  {!summary.count&&!loading&&<div className="dashboardempty" role="status">Nenhum conhecimento encontrado para {selectedName.toLocaleLowerCase('pt-BR')}. Os indicadores serão atualizados quando houver manifestos disponíveis.</div>}
+  <section className="dashboardcollection"><div><h2>Andamento dos recebimentos</h2><p>{selectedName} · {summary.receivedPercent.toLocaleString('pt-BR',{maximumFractionDigits:1})}% do frete recebido</p></div><div className="collectionbar" role="img" aria-label={`${summary.receivedPercent.toLocaleString('pt-BR',{maximumFractionDigits:1})}% recebido; ${brl(summary.balance)} pendentes`}><span style={{width:`${summary.receivedPercent}%`}}/></div><div className="collectionlegend"><span><i/>{brl(summary.received)} recebidos</span><span><i/>{brl(summary.balance)} pendentes</span></div><div className="collectioncounts"><div><b>{number(summary.paidCount)}</b><span>Quitados</span></div><div><b>{number(summary.partialCount)}</b><span>Pagamentos parciais</span></div><div><b>{number(summary.unpaidCount)}</b><span>Sem pagamento registrado</span></div></div></section>
+  {isAdmin&&<section className="tablecard dashboardcities"><div className="tableheading"><div><h2>Resumo por cidade</h2><p>Pendentes inclui os conhecimentos com pagamento parcial. Clique na cidade para filtrar o dashboard.</p></div></div><div className="tablewrap"><table><thead><tr><th>CIDADE</th><th>CONHECIMENTOS</th><th>QUITADOS</th><th>PARCIAIS</th><th>PENDENTES</th><th>FRETE TOTAL</th><th>RECEBIDO</th><th>SALDO</th></tr></thead><tbody>{visibleCities.map(item=><tr key={item.key}><td data-label="Cidade"><button className="triplink" onClick={()=>setCity(item.key)}>{nameOf(item.key)}</button></td><td data-label="Conhecimentos">{number(item.count)}</td><td data-label="Quitados">{number(item.paidCount)}</td><td data-label="Parciais">{number(item.partialCount)}</td><td data-label="Pendentes">{number(item.pendingCount)}</td><td data-label="Frete total">{brl(item.freight)}</td><td data-label="Recebido" className="received">{brl(item.received)}</td><td data-label="Saldo"><b>{brl(item.balance)}</b></td></tr>)}</tbody></table></div>{!visibleCities.length&&<div className="empty"><p>Não há dados para a cidade selecionada.</p></div>}</section>}
+ </section>;
+}

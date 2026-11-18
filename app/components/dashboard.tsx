@@ -1,24 +1,26 @@
 'use client';
 import {useState} from 'react';
 import PieChart from './pie-chart';
+import {canAccessCity} from '../../lib/cities';
+import {departureDate,displayVessel} from '../../lib/vessels';
 import {Check,Clock,FileText,MapPin,Wallet,ArrowDownToLine} from 'lucide-react';
 import {dashboardData,DashboardUser} from '../../lib/dashboard';
 const brl=(value:number)=>(value/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const number=(value:number)=>value.toLocaleString('pt-BR');
 type Props={manifests:any[];user:DashboardUser;cityCatalog:any[];loading:boolean;onRefresh:()=>void};
 export default function Dashboard({manifests,user,cityCatalog,loading,onRefresh}:Props){
- const [city,setCity]=useState('');const isAdmin=user.role==='admin';
- const {summary,cities}=dashboardData(manifests,user,city);
+ const [city,setCity]=useState(''),[trip,setTrip]=useState('');const isAdmin=user.role==='admin';
+ const {summary,cities}=dashboardData(manifests,user,city,isAdmin?'':trip);
  const options=new Map<string,string>();
  if(isAdmin)for(const item of cityCatalog)options.set(item.key,item.name);
  for(const item of cities)if(!options.has(item.key))options.set(item.key,item.name);
  const nameOf=(key:string)=>options.get(key)||key;
  const selectedName=isAdmin?(city?nameOf(city):'Todas as cidades'):(user.city||'Cidade não definida');
  const visibleCities=city?cities.filter(item=>item.key===city):cities;
- if(!isAdmin)return <section className="dashboardpage deliverydashboard"><div className="eyebrow">DASHBOARD / {selectedName}</div><div className="heading"><div><h1>Dashboard</h1><p>Recebimentos e pendências de {selectedName}.</p></div><button className="secondary" disabled={loading} onClick={onRefresh}>{loading?'Atualizando…':'Atualizar dados'}</button></div><div className="deliverypies" aria-busy={loading}>
-  <PieChart title="Quantidade de conhecimentos" totalLabel={`Total: ${number(summary.count)} conhecimentos`} data={[{label:'Cobranças quitadas',value:summary.paidCount,color:'#246649'},{label:'Pendentes',value:summary.pendingCount,color:'#a64d08'}]} formatValue={number} footnote={`Pendentes inclui ${number(summary.partialCount)} conhecimentos com pagamento parcial.`}/>
-  <PieChart title="Valores de cobrança" totalLabel={`Total: ${brl(summary.freight)}`} data={[{label:'Cobrança realizada',value:summary.received,color:'#246649'},{label:'Saldo pendente',value:summary.balance,color:'#a64d08'}]} formatValue={brl} footnote="Cobrança realizada corresponde ao valor recebido, incluindo pagamentos parciais."/>
- </div></section>;
+ const availableTrips=manifests.filter(manifest=>manifest.rows.some((row:any)=>canAccessCity(user,row.city)));
+ if(!isAdmin)return <section className="dashboardpage deliverydashboard"><div className="eyebrow">DASHBOARD / {selectedName}</div><div className="heading"><div><h1>Dashboard de peças</h1><p>Quantidades de peças de {selectedName}, conforme os volumes dos manifestos.</p></div><button className="secondary" disabled={loading} onClick={onRefresh}>{loading?'Atualizando…':'Atualizar dados'}</button></div><div className="dashboardtripfilter"><label>Filtrar por viagem / manifesto<select aria-label="Filtrar dashboard por viagem" value={trip} onChange={e=>setTrip(e.target.value)}><option value="">Todas as viagens da minha cidade</option>{trip&&!availableTrips.some(manifest=>manifest.id===trip)&&<option value={trip}>Viagem {trip} — sem dados disponíveis</option>}{availableTrips.map(manifest=>{const departure=departureDate(manifest.date);return <option key={manifest.id} value={manifest.id}>Saída {departure.date}{departure.weekday?` · ${departure.weekday}`:''} · {displayVessel(manifest)} · Viagem {manifest.id}</option>})}</select></label></div><div className="deliverypies singlepie" aria-busy={loading}>
+  <PieChart title="Quantidade de peças" totalLabel={`Total: ${number(summary.piecesCount)} peças`} data={[{label:'Peças com cobrança quitada',value:summary.paidPieces,color:'#246649'},{label:'Peças pendentes',value:summary.pendingPieces,color:'#a64d08'}]} formatValue={value=>`${number(value)} peças`} footnote="Peças correspondem aos volumes do manifesto. A quitação considera cada nota/frete quando detalhada; nos demais casos, considera o conhecimento. Pagamentos parciais não são convertidos proporcionalmente em peças."/>
+ </div>{summary.unknownVolumesCount>0&&<p className="hint">{number(summary.unknownVolumesCount)} conhecimentos não possuem quantidade de peças informada e precisam de conferência.</p>}</section>;
  const metrics=[
   {label:'Total de conhecimentos',value:number(summary.count),detail:`${number(summary.manifestCount)} manifestos com dados`,icon:FileText},
   {label:'Cobranças quitadas',value:number(summary.paidCount),detail:'Conhecimentos pagos integralmente',icon:Check},
