@@ -179,3 +179,23 @@ test('prazo de cobrança bloqueia apenas saldo vencido e inclui o instante exato
  assert.equal(collectionState({...row,collectionDueAt:'2026-11-25T18:00:00Z'},now).blocked,false);
  assert.equal(collectionState({freight:1000,payments:[],conferences:[{createdAt:'2025-01-01'}]},now).blocked,false);
 });
+
+const {collectionReport,collectionReportCsv,REPORT_CATEGORIES}=require('../.test-build/collection-report.js');
+test('relatório separa situações exclusivas por saldo atual sem duplicar notas e pagamentos parciais antigos',()=>{
+ const manifests=[{id:'A',date:'18/11/2026',rows:[{id:'paid',client:'CLIENTE',city:'Gurupá',volumes:2,freight:1000,payments:[{amount:200,type:'parcial'},{amount:800,type:'integral'}],freights:[{freight:1000,payments:[{amount:1000}]}]},{id:'partial',client:'CLIENTE',city:'GURUPA',volumes:3,freight:2000,payments:[{amount:500}],receivedAt:'2026-11-01T00:00:00Z',collectionDueAt:'2026-11-08T00:00:00Z'},{id:'pending',client:'CLIENTE',city:'ALMEIRIM',volumes:4,freight:3000,payments:[]}]},{id:'B',rows:[{id:'paid',client:'OUTRO',city:'GURUPA',volumes:5,freight:4000,payments:[]}]}];
+ const filters={manifestId:'',city:'',category:'',query:''};
+ const data=collectionReport(manifests,{role:'admin'},filters,Date.parse('2026-11-18T00:00:00Z'));
+ assert.deepEqual(data.groups.map(g=>g.count),[1,1,2]);assert.equal(data.rows.length,4);assert.equal(data.groups[0].received,1000);assert.equal(data.groups[1].balance,1500);assert.equal(data.groups[1].rows[0].blocked,true);assert.equal(data.groups[2].pieces,9);
+ const combined=collectionReport(manifests,{role:'admin'},{...filters,manifestId:'A',city:'GURUPA',category:REPORT_CATEGORIES[1]});assert.equal(combined.rows.length,1);assert.equal(combined.rows[0].id,'partial');
+ const scoped=collectionReport(manifests,{role:'entregador',city:'GURUPA'},filters);assert.equal(scoped.rows.length,3);assert.ok(scoped.rows.every(row=>row.city!=='ALMEIRIM'));
+ assert.equal(collectionReport(manifests,{role:'entregador',city:'GURUPA'},{...filters,city:'ALMEIRIM'}).rows.length,0);
+ assert.equal(collectionReport(manifests,{role:'entregador',city:''},filters).rows.length,0);
+ assert.equal(collectionReport(manifests,{role:'blocked'},filters).rows.length,0);
+ assert.equal(collectionReport(manifests,{role:'admin'},{...filters,query:'OUTRO'}).rows.length,1);
+ assert.equal(collectionReport(manifests,{role:'admin'},{...filters,manifestId:'inexistente'}).rows.length,0);
+});
+test('CSV do relatório respeita os registros filtrados e neutraliza fórmulas de planilhas',()=>{
+ const manifests=[{id:'A',rows:[{id:'01',client:'=HYPERLINK("exemplo")',city:'GURUPA',volumes:1,freight:1000,payments:[{amount:1000}]},{id:'02',client:'NÃO EXPORTAR',city:'GURUPA',volumes:2,freight:2000,payments:[]}]}];
+ const data=collectionReport(manifests,{role:'admin'},{manifestId:'A',city:'',category:REPORT_CATEGORIES[0],query:''});const csv=collectionReportCsv(data.rows);
+ assert.ok(csv.startsWith('\ufeff'));assert.ok(csv.includes("'=HYPERLINK"));assert.ok(!csv.includes('NÃO EXPORTAR'));assert.equal(csv.split('\r\n').length,2);assert.ok(csv.includes('"10.00";"10.00";"0.00"'));
+});
