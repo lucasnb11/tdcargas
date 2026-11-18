@@ -129,3 +129,17 @@ test('saída identifica sexta-feira sem deslocar a data por fuso e recupera emba
  assert.equal(displayVessel({route:'F/B SAO DOMINGOS VIII'}),'Embarcação não informada');
  assert.equal(displayRoute({route:'BELÉM / ALMEIRIM - F/B SÃO DOMINGOS V'}),'BELÉM / ALMEIRIM');
 });
+
+const {dashboardData}=require('../.test-build/dashboard.js');
+test('dashboard consolida valores e quantidades sem duplicar pagamentos de notas ou lotes',()=>{
+ const manifests=[{id:'M1',rows:[{id:'C1',client:'A',city:'Gurupá',freight:10000,payments:[{amount:3000,freightId:'n1'}],freights:[{freight:10000}]},{id:'C2',client:'B',city:'GURUPA',freight:5000,payments:[{amount:5000,batchId:'lote'}]},{id:'C3',client:'C',city:'ALMEIRIM',freight:20000,payments:[]}]},{id:'M2',rows:[{id:'C4',client:'D',city:'ALMEIRIM',freight:1000,payments:[{amount:1000}]}]}];
+ const all=dashboardData(manifests,{role:'admin'});
+ assert.equal(all.summary.count,4);assert.equal(all.summary.manifestCount,2);assert.equal(all.summary.paidCount,2);assert.equal(all.summary.pendingCount,2);assert.equal(all.summary.partialCount,1);
+ assert.equal(all.summary.freight,36000);assert.equal(all.summary.received,9000);assert.equal(all.summary.balance,27000);assert.equal(all.summary.receivedPercent,25);assert.equal(all.cities.length,2);
+ const city=dashboardData(manifests,{role:'admin'},'GURUPA');assert.equal(city.summary.count,2);assert.equal(city.summary.received,8000);assert.equal(city.summary.balance,7000);
+ const operator=dashboardData(manifests,{role:'entregador',city:'Gurupá'},'ALMEIRIM');assert.equal(operator.summary.count,2);assert.equal(operator.summary.balance,7000);assert.equal(operator.cities.length,1);assert.equal(operator.cities[0].key,'GURUPA');
+ assert.equal(dashboardData(manifests,{role:'entregador',city:''}).summary.count,0);
+ assert.equal(dashboardData(manifests,{role:'blocked',city:'GURUPA'}).summary.count,0);
+ assert.equal(dashboardData(manifests,{role:'admin'},'SEM DADOS').summary.count,0);
+ assert.equal(dashboardData([],{role:'admin'}).summary.receivedPercent,0);
+});

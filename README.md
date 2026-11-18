@@ -137,3 +137,11 @@ Na lista de conhecimentos da tela do destinatário, Pagar tudo abre uma confirma
 2. Assim que o manifesto é salvo, abre a tela Importar conhecimentos. O sistema informa o número salvo, explica a finalidade do segundo PDF e limita os vínculos a essa viagem.
 
 O botão Importar conhecimentos depois encerra a segunda etapa sem desfazer o manifesto. A importação pode ser retomada em Viagens e manifestos → Importar conhecimentos. Caso falhe apenas o recarregamento da lista após salvar o manifesto, os dados recém-conferidos continuam disponíveis para a leitura da segunda etapa; o salvamento final valida os vínculos novamente no servidor.
+
+## Dashboard por cidade
+
+A aba Dashboard reúne total de conhecimentos, cobranças quitadas, pendências (incluindo parciais), frete total, valor recebido e saldo a receber de todos os manifestos acessíveis. Os valores são somados a partir dos pagamentos do conhecimento; notas/fretes e baixas em lote não são contados novamente.
+
+Entregadores veem somente a cidade vinculada ao perfil, conforme a restrição aplicada pelo banco em `td_listar_manifestos`. A interface reforça esse escopo e não oferece seleção de outras cidades. Administradores veem o consolidado de todas as cidades, podem filtrar a seleção e consultar o resumo por cidade. O dashboard é atualizado ao abrir a aba, após recarregar os dados e pelo botão Atualizar dados.
+
+Cobrança realizada significa valor recebido registrado no sistema. Conhecimentos com recebimento parcial continuam entre as pendências até a quitação do saldo.
