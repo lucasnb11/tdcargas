@@ -114,3 +114,18 @@ test('segunda etapa limita o vínculo ao manifesto que acabou de ser importado',
  // A importação avulsa continua aceitando todos os manifestos cadastrados.
  assert.equal(parseFreightDocuments(freightDoc,manifestsForFreights).records.length,1);
 });
+
+const {displayVessel,departureDate,displayRoute}=require('../.test-build/vessels.js');
+test('saída identifica sexta-feira sem deslocar a data por fuso e recupera embarcação da rota antiga',()=>{
+ assert.deepEqual(departureDate('13/11/2026'),{date:'13/11/2026',weekday:'Sexta-feira',iso:'2026-11-13'});
+ assert.equal(departureDate('2026-11-13').weekday,'Sexta-feira');
+ assert.equal(departureDate('29/02/2024').weekday,'Quinta-feira');
+ assert.equal(departureDate('31/02/2026').weekday,'');
+ assert.equal(departureDate(undefined).date,'Data não informada');
+ assert.equal(displayVessel({route:'BELÉM / ALMEIRIM - F/B SÃO DOMINGOS V'}),'F/B SÃO DOMINGOS V');
+ assert.equal(displayVessel({route:'BELÉM / GURUPÁ - F/B DONA DOMINGAS'}),'F/B DONA DOMINGAS');
+ assert.equal(displayVessel({vessel:'F/B DONA DOMINGAS',route:'BELÉM - F/B SÃO DOMINGOS V'}),'F/B DONA DOMINGAS');
+ assert.equal(displayVessel({route:'BELÉM / ALMEIRIM'}),'Embarcação não informada');
+ assert.equal(displayVessel({route:'F/B SAO DOMINGOS VIII'}),'Embarcação não informada');
+ assert.equal(displayRoute({route:'BELÉM / ALMEIRIM - F/B SÃO DOMINGOS V'}),'BELÉM / ALMEIRIM');
+});
