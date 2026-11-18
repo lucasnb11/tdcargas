@@ -145,3 +145,7 @@ A aba Dashboard reúne total de conhecimentos, cobranças quitadas, pendências 
 Entregadores veem somente a cidade vinculada ao perfil, conforme a restrição aplicada pelo banco em `td_listar_manifestos`. A interface reforça esse escopo e não oferece seleção de outras cidades. Administradores veem o consolidado de todas as cidades, podem filtrar a seleção e consultar o resumo por cidade. O dashboard é atualizado ao abrir a aba, após recarregar os dados e pelo botão Atualizar dados.
 
 Cobrança realizada significa valor recebido registrado no sistema. Conhecimentos com recebimento parcial continuam entre as pendências até a quitação do saldo.
+
+### Dashboard dos entregadores em pizza
+
+Para entregadores, o dashboard usa somente dois gráficos de pizza: quantidade de conhecimentos (quitados e pendentes) e valores (recebido e saldo pendente), com o total e as legendas em cada gráfico. Pagamentos parciais entram no recebido e continuam pendentes até a quitação. A cidade continua sendo definida pelo perfil e pela restrição aplicada no servidor. O dashboard dos administradores mantém os indicadores e filtros existentes.

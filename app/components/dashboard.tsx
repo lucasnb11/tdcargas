@@ -1,5 +1,6 @@
 'use client';
 import {useState} from 'react';
+import PieChart from './pie-chart';
 import {Check,Clock,FileText,MapPin,Wallet,ArrowDownToLine} from 'lucide-react';
 import {dashboardData,DashboardUser} from '../../lib/dashboard';
 const brl=(value:number)=>(value/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -14,6 +15,10 @@ export default function Dashboard({manifests,user,cityCatalog,loading,onRefresh}
  const nameOf=(key:string)=>options.get(key)||key;
  const selectedName=isAdmin?(city?nameOf(city):'Todas as cidades'):(user.city||'Cidade não definida');
  const visibleCities=city?cities.filter(item=>item.key===city):cities;
+ if(!isAdmin)return <section className="dashboardpage deliverydashboard"><div className="eyebrow">DASHBOARD / {selectedName}</div><div className="heading"><div><h1>Dashboard</h1><p>Recebimentos e pendências de {selectedName}.</p></div><button className="secondary" disabled={loading} onClick={onRefresh}>{loading?'Atualizando…':'Atualizar dados'}</button></div><div className="deliverypies" aria-busy={loading}>
+  <PieChart title="Quantidade de conhecimentos" totalLabel={`Total: ${number(summary.count)} conhecimentos`} data={[{label:'Cobranças quitadas',value:summary.paidCount,color:'#246649'},{label:'Pendentes',value:summary.pendingCount,color:'#a64d08'}]} formatValue={number} footnote={`Pendentes inclui ${number(summary.partialCount)} conhecimentos com pagamento parcial.`}/>
+  <PieChart title="Valores de cobrança" totalLabel={`Total: ${brl(summary.freight)}`} data={[{label:'Cobrança realizada',value:summary.received,color:'#246649'},{label:'Saldo pendente',value:summary.balance,color:'#a64d08'}]} formatValue={brl} footnote="Cobrança realizada corresponde ao valor recebido, incluindo pagamentos parciais."/>
+ </div></section>;
  const metrics=[
   {label:'Total de conhecimentos',value:number(summary.count),detail:`${number(summary.manifestCount)} manifestos com dados`,icon:FileText},
   {label:'Cobranças quitadas',value:number(summary.paidCount),detail:'Conhecimentos pagos integralmente',icon:Check},
