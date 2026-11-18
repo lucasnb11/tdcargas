@@ -26,6 +26,10 @@ if(b.action==='save_freights'){
  const documents=b.documents.map((d:any)=>{const row=manifests.find(m=>m.id===d.manifestId)?.rows.find((r:any)=>r.id===d.rowId);if(!row)throw Error('Conhecimento não encontrado no manifesto.');return {manifestId:d.manifestId,rowId:d.rowId,items:validateFreights(d.items,row.freight)};});
  const {data,error}=await client.rpc('td_salvar_fretes',{p_documents:documents});if(error)throw Error(error.message);return privateJson(data);
 }
+if(['receive','unlock'].includes(b.action)){
+ if(b.action==='unlock'&&user.role!=='admin')return privateJson({error:'Somente administradores podem liberar pagamentos.'},{status:403});
+ const {error}=await client.rpc('td_controlar_cobranca',{p_manifest_id:b.manifestId,p_row_id:b.rowId,p_action:b.action});if(error)throw Error(error.message);return privateJson({ok:true});
+}
 if(b.action==='pay_all'){
  if(typeof b.recipientKey!=='string'||!b.recipientKey.trim()||b.recipientKey.length>200||typeof b.manifestId!=='string'||!b.manifestId||!Number.isSafeInteger(b.expectedAmount)||b.expectedAmount<=0||!Number.isSafeInteger(b.expectedCount)||b.expectedCount<1)throw Error('Destinatário ou total inválido.');
  const {data,error}=await client.rpc('td_pagar_destinatario',{p_manifest_id:b.manifestId,p_recipient_key:b.recipientKey,p_expected_amount:b.expectedAmount,p_expected_count:b.expectedCount,p_date:b.date||null,p_method:b.method||null});if(error)throw Error(error.message);return privateJson(data);

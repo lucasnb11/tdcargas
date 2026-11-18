@@ -169,3 +169,13 @@ test('dashboard administrador combina cidade e viagem inclusive no resumo por ci
  assert.equal(dashboardData(manifests,{role:'admin'},'ALMEIRIM','B').summary.count,0);
  assert.equal(dashboardData(manifests,{role:'admin'},'GURUPA').summary.freight,5000);
 });
+
+const {collectionState,assertCollectionOpen}=require('../.test-build/collection.js');
+test('prazo de cobrança bloqueia apenas saldo vencido e inclui o instante exato do vencimento',()=>{
+ const now=Date.parse('2026-11-18T18:00:00Z');
+ const row={freight:1000,payments:[{amount:100}],receivedAt:'2026-11-11T18:00:00Z',collectionDueAt:'2026-11-18T18:00:00Z'};
+ assert.equal(collectionState(row,now-1).blocked,false);assert.equal(collectionState(row,now).blocked,true);assert.throws(()=>assertCollectionOpen(row,now),/bloqueado/);
+ assert.equal(collectionState({...row,payments:[{amount:1000}]},now).blocked,false);
+ assert.equal(collectionState({...row,collectionDueAt:'2026-11-25T18:00:00Z'},now).blocked,false);
+ assert.equal(collectionState({freight:1000,payments:[],conferences:[{createdAt:'2025-01-01'}]},now).blocked,false);
+});
