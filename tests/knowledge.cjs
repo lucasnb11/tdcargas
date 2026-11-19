@@ -214,3 +214,9 @@ test('API de relatórios exige administrador antes de carregar qualquer dado',as
   const result=await exported.GET();assert.equal(result.status,role==='admin'?200:403);assert.equal(reads,role==='admin'?1:0);
  }
 });
+
+test('exportação centralizada preserva rota e histórico de pagamentos sem somar o histórico novamente',()=>{
+ const manifests=[{id:'A',route:'BELÉM / ALMEIRIM',rows:[{id:'01',client:'CLIENTE',city:'ALMEIRIM',volumes:3,freight:1000,payments:[{amount:200,date:'2026-11-18',operator:'OPERADOR',method:'Dinheiro',note:'Sem dinheiro'},{amount:800,date:'2026-11-19',operator:'ADMIN',method:'Pix',note:'Quitação do saldo',freightId:'n1',noteNumber:'NF10'}]}]}];
+ const data=collectionReport(manifests,{role:'admin'},{manifestId:'A',city:'',category:'',query:''});const csv=collectionReportCsv(data.rows);
+ assert.equal(data.rows.length,1);assert.equal(data.rows[0].received,1000);assert.ok(csv.includes('BELÉM / ALMEIRIM'));assert.ok(csv.includes('2026-11-18 | Conhecimento | 2.00 | OPERADOR | Dinheiro | Sem dinheiro'));assert.ok(csv.includes('2026-11-19 | Nota NF10 | 8.00 | ADMIN | Pix | Quitação do saldo'));
+});

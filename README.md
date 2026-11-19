@@ -49,3 +49,14 @@ Para outra instalação, aplicar as migrações `supabase/migrations/20261118231
 A aba Relatório de cobranças é exclusiva para administradores e permite gerar uma consulta por viagem/manifesto, cidade (administradores), situação e destinatário/conhecimento. Entregadores não visualizam a aba nem geram este relatório. Gerar relatório recarrega os dados do servidor e registra o horário da consulta; mudar os filtros exige gerar novamente. O CSV exporta exatamente os resultados gerados e pode ser aberto no Excel.
 
 Os grupos são exclusivos pelo saldo atual: Cobradas (Total) = quitadas; Cobradas (Parcial) = têm recebimento e saldo; Pendentes de cobrança = sem pagamento registrado. Um conhecimento quitado após vários parciais aparece apenas em Total. A consulta soma somente pagamentos dos conhecimentos, sem duplicar detalhes das notas/fretes. Mostra conhecimentos, peças/volumes, frete, recebido, saldo e prazo/bloqueio. Pendente identifica ausência de pagamento no sistema, não tentativa de cobrança. Nenhum dado operacional é alterado ao gerar o relatório.
+
+## Fluxo simplificado de operação
+
+- Importar novas viagens e retomar a importação dos conhecimentos: Viagens e manifestos.
+- Consultar todos os conhecimentos entre viagens: Conhecimentos. Clientes pagadores mantém o consolidado por cliente entre manifestos; Pendências mostra só saldos da viagem selecionada. Essas consultas têm escopos diferentes.
+- Abrir destinatário: clique diretamente no nome, sem um segundo botão com a mesma função.
+- Confirmar recebimento e pagar: tela dos conhecimentos do destinatário. Pagar tudo aparece quando há mais de um conhecimento com saldo; para um único saldo, use Pagar conhecimento.
+- Consultar histórico: Ver histórico, sem outra entrada para pagar.
+- Gerar e exportar: Relatório de cobranças, exclusivo do administrador. O CSV inclui também rota e histórico de pagamentos.
+
+Foram removidas as entradas repetidas de importação, o banner que duplicava o menu de pendências e a interface de notas/fretes que ficou sem acesso. A importação de detalhes, os registros existentes e os controles no banco foram preservados.
