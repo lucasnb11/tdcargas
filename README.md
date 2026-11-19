@@ -60,3 +60,5 @@ Os grupos são exclusivos pelo saldo atual: Cobradas (Total) = quitadas; Cobrada
 - Gerar e exportar: Relatório de cobranças, exclusivo do administrador. O CSV inclui também rota e histórico de pagamentos.
 
 Foram removidas as entradas repetidas de importação, o banner que duplicava o menu de pendências e a interface de notas/fretes que ficou sem acesso. A importação de detalhes, os registros existentes e os controles no banco foram preservados.
+
+A consulta global Conhecimentos é exclusiva do administrador. Entregadores acessam os conhecimentos pelo fluxo Viagens e manifestos → Abrir cargas para baixa → Destinatário.
