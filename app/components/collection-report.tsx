@@ -7,8 +7,8 @@ import {REPORT_CATEGORIES,collectionReport,collectionReportCsv,ReportFilters} fr
 import {departureDate,displayVessel} from '../../lib/vessels';
 const brl=(value:number)=>(value/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const number=(value:number)=>value.toLocaleString('pt-BR');
-type Props={manifests:any[];user:{role:string;city?:string|null};cityCatalog:any[];onRefresh:()=>Promise<any[]|null>};
-export default function CollectionReport({manifests,user,cityCatalog,onRefresh}:Props){
+type Props={manifests:any[];user:{role:string;city?:string|null};cityCatalog:any[]};
+export default function CollectionReport({manifests,user,cityCatalog}:Props){
  const [filters,setFilters]=useState<ReportFilters>({manifestId:'',city:'',category:'',query:''});
  const [report,setReport]=useState<{manifests:any[];filters:ReportFilters;at:number}|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const isAdmin=user.role==='admin';
@@ -16,8 +16,9 @@ export default function CollectionReport({manifests,user,cityCatalog,onRefresh}:
  const cities=new Map<string,string>();
  if(isAdmin){for(const c of cityCatalog)cities.set(c.key,c.name);for(const m of availableTrips)for(const row of m.rows){const key=normalizeCity(row.city);if(key&&!cities.has(key))cities.set(key,row.city);}}
  const data=report?collectionReport(report.manifests,user,report.filters,report.at):null;
- async function generate(e:any){e.preventDefault();setBusy(true);setError('');const selection={...filters};try{const fresh=await onRefresh();if(!fresh)throw Error('Não foi possível atualizar os dados. Tente gerar o relatório novamente.');setReport({manifests:fresh,filters:selection,at:Date.now()});}catch(e:any){setError(e.message);}finally{setBusy(false);}}
+ async function generate(e:any){e.preventDefault();setBusy(true);setError('');const selection={...filters};try{const response=await fetch('/api/reports',{cache:'no-store'});const fresh=await response.json();if(!response.ok)throw Error(fresh.error||'Não foi possível gerar o relatório.');setReport({manifests:fresh,filters:selection,at:Date.now()});}catch(e:any){setError(e.message);}finally{setBusy(false);}}
  function download(){if(!data)return;const url=URL.createObjectURL(new Blob([collectionReportCsv(data.rows)],{type:'text/csv;charset=utf-8;'}));const link=document.createElement('a');link.href=url;link.download='relatorio_cobrancas.csv';link.click();URL.revokeObjectURL(url);}
+ if(!isAdmin)return null;
  return <section className="collectionreport"><div className="eyebrow">RECEBIMENTOS / RELATÓRIOS</div><div className="heading"><div><h1>Relatório de cobranças</h1><p>Identifique as cargas quitadas, com pagamento parcial e sem pagamento registrado.</p></div></div>
  <form className="reportfilters" onSubmit={generate}><label>Viagem / manifesto<select value={filters.manifestId} onChange={e=>setFilters({...filters,manifestId:e.target.value})}><option value="">Todas as viagens{!isAdmin?' da minha cidade':''}</option>{availableTrips.map(m=><option key={m.id} value={m.id}>Saída {departureDate(m.date).date} · {displayVessel(m)} · {m.id}</option>)}</select></label>{isAdmin?<label>Cidade<select value={filters.city} onChange={e=>setFilters({...filters,city:e.target.value})}><option value="">Todas as cidades</option>{[...cities].sort((a,b)=>a[1].localeCompare(b[1],'pt-BR')).map(([key,name])=><option key={key} value={key}>{name}</option>)}</select></label>:<p className="reportaccess">Cidade: <b>{user.city||'Sem cidade definida'}</b></p>}
  <label>Situação da cobrança<select value={filters.category} onChange={e=>setFilters({...filters,category:e.target.value})}><option value="">Todas as situações</option>{REPORT_CATEGORIES.map(category=><option key={category}>{category}</option>)}</select></label><label>Destinatário ou conhecimento<input value={filters.query} onChange={e=>setFilters({...filters,query:e.target.value})} placeholder="Buscar nome ou número"/></label><button className="primary" disabled={busy} type="submit"><FileText size={17}/>{busy?'Gerando…':'Gerar relatório'}</button></form>

@@ -199,3 +199,18 @@ test('CSV do relatório respeita os registros filtrados e neutraliza fórmulas d
  const data=collectionReport(manifests,{role:'admin'},{manifestId:'A',city:'',category:REPORT_CATEGORIES[0],query:''});const csv=collectionReportCsv(data.rows);
  assert.ok(csv.startsWith('\ufeff'));assert.ok(csv.includes("'=HYPERLINK"));assert.ok(!csv.includes('NÃO EXPORTAR'));assert.equal(csv.split('\r\n').length,2);assert.ok(csv.includes('"10.00";"10.00";"0.00"'));
 });
+
+test('API de relatórios exige administrador antes de carregar qualquer dado',async()=>{
+ const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+ const source=ts.transpileModule(fs.readFileSync('app/api/reports/route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
+ for(const role of [null,'entregador','blocked','admin']){
+  let reads=0;const exported={};
+  vm.runInNewContext(source,{exports:exported,require:(name)=>{
+   if(name.endsWith('/access'))return {getAccess:async()=>role?{role}:null};
+   if(name.endsWith('/private-json'))return {privateJson:(body,options)=>({body,status:options?.status||200})};
+   if(name.endsWith('/repository'))return {loadManifests:async()=>{reads++;return [{id:'A'}]}};
+   throw Error(name);
+  }});
+  const result=await exported.GET();assert.equal(result.status,role==='admin'?200:403);assert.equal(reads,role==='admin'?1:0);
+ }
+});

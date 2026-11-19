@@ -46,6 +46,6 @@ Para outra instalação, aplicar as migrações `supabase/migrations/20261118231
 
 ## Relatório de cobranças
 
-A aba Relatório de cobranças permite gerar uma consulta por viagem/manifesto, cidade (administradores), situação e destinatário/conhecimento. Entregadores acessam apenas a própria cidade. Gerar relatório recarrega os dados do servidor e registra o horário da consulta; mudar os filtros exige gerar novamente. O CSV exporta exatamente os resultados gerados e pode ser aberto no Excel.
+A aba Relatório de cobranças é exclusiva para administradores e permite gerar uma consulta por viagem/manifesto, cidade (administradores), situação e destinatário/conhecimento. Entregadores não visualizam a aba nem geram este relatório. Gerar relatório recarrega os dados do servidor e registra o horário da consulta; mudar os filtros exige gerar novamente. O CSV exporta exatamente os resultados gerados e pode ser aberto no Excel.
 
 Os grupos são exclusivos pelo saldo atual: Cobradas (Total) = quitadas; Cobradas (Parcial) = têm recebimento e saldo; Pendentes de cobrança = sem pagamento registrado. Um conhecimento quitado após vários parciais aparece apenas em Total. A consulta soma somente pagamentos dos conhecimentos, sem duplicar detalhes das notas/fretes. Mostra conhecimentos, peças/volumes, frete, recebido, saldo e prazo/bloqueio. Pendente identifica ausência de pagamento no sistema, não tentativa de cobrança. Nenhum dado operacional é alterado ao gerar o relatório.
