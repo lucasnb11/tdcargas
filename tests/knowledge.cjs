@@ -231,3 +231,37 @@ test('desconto mantém recebimento real, quita saldo e exporta trilha sem duplic
  const summary=dashboardData(manifests,user).summary;assert.equal(summary.received,10000);assert.equal(summary.paidPieces,3);
  const csv=collectionReportCsv(report.rows);assert.match(csv,/Frete original/);assert.match(csv,/110.00/);assert.match(csv,/Acordo/);
 });
+
+test('mercadorias preservam identificação e saldo do pai ao abrir pagamento por item',()=>{
+ const {freightBalances,freightPaymentRow}=require('../.test-build/freights.js');
+ const row={freight:29000,payments:[{amount:9000,freightId:'bev'}],freights:[{id:'bev',noteNumber:'N',tracking:'',sender:'',description:'Bebidas',category:'Bebidas',volumes:2,freight:9000,originalFreight:10000},{id:'food',noteNumber:'N',tracking:'',sender:'',description:'Estiva',category:'Estiva',volumes:3,freight:20000}]};
+ const items=freightBalances(row);assert.equal(items[0].balance,0);assert.equal(items[1].balance,20000);assert.equal(items[0].description,'Bebidas');assert.equal(items[0].originalFreight,10000);
+ const payment=freightPaymentRow(row,items[1]);assert.equal(payment.parentFreight,29000);assert.equal(payment.parentPaid,9000);assert.equal(payment.freight,20000);assert.equal(payment.itemDescription,'Estiva');
+});
+test('prestação separa dinheiro, outros meios, despesas, recursos próprios e indenizações',()=>{
+ const {cashStatement,operationsCsv,validateOperation}=require('../.test-build/operations.js');
+ const manifests=[{id:'M',rows:[{city:'A',payments:[{amount:9000,method:'Dinheiro'},{amount:20000,method:'Pix'}]},{city:'B',payments:[{amount:80000,method:'Dinheiro'}]}]}];
+ const base={manifest_id:'M',city:'A',status:'paid',kind:'expense',data:{amount:1500,source:'Dinheiro das cobranças',description:'Carne'}};
+ const entries=[base,{...base,kind:'damage',data:{amount:5000,approvedAmount:4000,source:'Dinheiro das cobranças'}},{...base,data:{amount:500,source:'Recurso próprio'}},{...base,kind:'damage',status:'approved',data:{amount:1000,approvedAmount:800}},{...base,kind:'damage',status:'rejected',data:{amount:90000}},{...base,city:'B',data:{amount:10000,source:'Dinheiro das cobranças'}}];
+ const s=cashStatement(manifests,entries,'M','A');assert.equal(s.cashReceived,9000);assert.equal(s.bankReceived,20000);assert.equal(s.cashOut,5500);assert.equal(s.cashBalance,3500);assert.equal(s.expenses,2000);assert.equal(s.indemnities,4000);assert.equal(s.ownFunds,500);assert.equal(s.pendingIndemnities,800);
+ assert.match(operationsCsv([{...base,data:{...base.data,description:'=FORMULA'}}]),/'=FORMULA/);
+ const input={kind:'expense',manifestId:'M',city:'A',data:{amount:1500,description:'Compra',date:'2026-11-22',category:'Alimentação',source:'Dinheiro das cobranças',attachments:[]}};
+ assert.doesNotThrow(()=>validateOperation(input));assert.throws(()=>validateOperation({...input,data:{...input.data,amount:1.5}}));assert.throws(()=>validateOperation({...input,data:{...input.data,source:'Qualquer'}}));
+});
+
+test('API de operações recusa aprovações de entregadores antes da chamada ao banco',async()=>{
+ const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+ const source=ts.transpileModule(fs.readFileSync('app/api/operations/route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
+ for(const role of [null,'blocked','entregador','admin']){
+  let writes=0;const exported={};
+  vm.runInNewContext(source,{exports:exported,require:name=>{
+   if(name.endsWith('/access'))return {getAccess:async()=>role?{role}:null};
+   if(name.endsWith('/private-json'))return {privateJson:(body,options)=>({body,status:options?.status||200})};
+   if(name.endsWith('/supabase-server'))return {createSupabase:async()=>({rpc:async()=>{writes++;return {data:{ok:true}}}})};
+   if(name.endsWith('/operations'))return require('../.test-build/operations.js');
+   throw Error(name);
+  }});
+  const result=await exported.POST({json:async()=>({action:'approve',input:{id:'test'}})});
+  assert.equal(result.status,role==='admin'?200:403);assert.equal(writes,role==='admin'?1:0);
+ }
+});

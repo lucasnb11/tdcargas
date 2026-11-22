@@ -30,9 +30,14 @@ if(['receive','unlock'].includes(b.action)){
  if(b.action==='unlock'&&user.role!=='admin')return privateJson({error:'Somente administradores podem liberar pagamentos.'},{status:403});
  const {error}=await client.rpc('td_controlar_cobranca',{p_manifest_id:b.manifestId,p_row_id:b.rowId,p_action:b.action});if(error)throw Error(error.message);return privateJson({ok:true});
 }
-if(b.action==='adjust_freight'){
+if(b.action==='manage_items'){
+ if(user.role!=='admin')return privateJson({error:'Apenas administradores podem dividir mercadorias.'},{status:403});
+ const {error}=await client.rpc('td_gerenciar_mercadorias',{p_manifest_id:b.manifestId,p_row_id:b.rowId,p_items:b.items,p_expected_freight:b.expectedFreight});if(error)throw Error(error.message);return privateJson({ok:true});
+}
+if(['adjust_freight','adjust_item'].includes(b.action)){
+
  if(!Number.isSafeInteger(b.value)||b.value<=0||b.value>100000000000||!['correction','discount'].includes(b.kind)||typeof b.reason!=='string'||!b.reason.trim()||b.reason.trim().length>2000||!Number.isSafeInteger(b.expectedFreight)||!Number.isSafeInteger(b.expectedPaid))throw Error('Informe o novo valor e uma justificativa de até 2000 caracteres.');
- const {error}=await client.rpc('td_ajustar_frete',{p_manifest_id:b.manifestId,p_row_id:b.rowId,p_value:b.value,p_kind:b.kind,p_reason:b.reason.trim(),p_expected_freight:b.expectedFreight,p_expected_paid:b.expectedPaid});if(error)throw Error(error.message);return privateJson({ok:true});
+ const {error}=await client.rpc(b.action==='adjust_item'?'td_ajustar_mercadoria':'td_ajustar_frete',{...(b.action==='adjust_item'?{p_freight_id:b.freightId}:{}),p_manifest_id:b.manifestId,p_row_id:b.rowId,p_value:b.value,p_kind:b.kind,p_reason:b.reason.trim(),p_expected_freight:b.expectedFreight,p_expected_paid:b.expectedPaid});if(error)throw Error(error.message);return privateJson({ok:true});
 }
 if(b.action==='pay_all'){
  if(typeof b.recipientKey!=='string'||!b.recipientKey.trim()||b.recipientKey.length>200||typeof b.manifestId!=='string'||!b.manifestId||!Number.isSafeInteger(b.expectedAmount)||b.expectedAmount<=0||!Number.isSafeInteger(b.expectedCount)||b.expectedCount<1)throw Error('Destinatário ou total inválido.');

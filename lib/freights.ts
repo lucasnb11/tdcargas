@@ -1,9 +1,9 @@
-export type FreightItem={id:string;noteNumber:string;tracking:string;sender:string;volumes:number;freight:number};
+export type FreightItem={id:string;noteNumber:string;tracking:string;sender:string;volumes:number;freight:number;description?:string;category?:string;originalFreight?:number};
 export function validateFreights(items:any,expected:number):FreightItem[]{
  if(!Array.isArray(items)||!items.length||items.length>2000)throw Error('Informe entre 1 e 2000 notas/fretes.');
  const result=items.map((item:any)=>{
   if(!item||typeof item.id!=='string'||!item.id.trim()||item.id.length>120||typeof item.noteNumber!=='string'||!item.noteNumber.trim()||item.noteNumber.length>60||typeof item.sender!=='string'||item.sender.length>200||typeof item.tracking!=='string'||item.tracking.length>80||!Number.isSafeInteger(item.volumes)||item.volumes<0||item.volumes>1000000||!Number.isSafeInteger(item.freight)||item.freight<0||item.freight>100000000000)throw Error('Nota/frete inválido: confira número, volumes e valor.');
-  return {id:item.id.trim(),noteNumber:item.noteNumber.trim(),tracking:item.tracking.trim(),sender:item.sender.trim(),volumes:item.volumes,freight:item.freight};
+  return {...(typeof item.description==='string'?{description:item.description.slice(0,200)}:{}),...(typeof item.category==='string'?{category:item.category.slice(0,40)}:{}),...(Number.isSafeInteger(item.originalFreight)?{originalFreight:item.originalFreight}:{}),id:item.id.trim(),noteNumber:item.noteNumber.trim(),tracking:item.tracking.trim(),sender:item.sender.trim(),volumes:item.volumes,freight:item.freight};
  });
  if(new Set(result.map(i=>i.id)).size!==result.length)throw Error('Existem notas/fretes duplicados.');
  if(result.reduce((sum,i)=>sum+i.freight,0)!==expected)throw Error('A soma dos fretes deve ser igual ao frete total do conhecimento.');
@@ -25,5 +25,5 @@ export function freightBalances(row:any){
  return items;
 }
 export function freightPaymentRow(row:any,item:ReturnType<typeof freightBalances>[number]){
- return {...row,freight:item.freight,payments:item.received?[{amount:item.received}]:[],freightId:item.id,noteNumber:item.noteNumber,tracking:item.tracking};
+ return {...row,parentFreight:row.freight,parentPaid:row.payments.reduce((s:number,p:any)=>s+p.amount,0),itemDescription:item.description||item.noteNumber,freight:item.freight,payments:item.received?[{amount:item.received}]:[],freightId:item.id,noteNumber:item.noteNumber,tracking:item.tracking};
 }

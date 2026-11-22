@@ -1,0 +1,65 @@
+begin;
+do $$
+declare aid uuid;did uuid;dcity text;fixture text:='ops-test-'||gen_random_uuid();expense uuid:=gen_random_uuid();damage uuid:=gen_random_uuid();rejected uuid:=gen_random_uuid();photo text;foreignphoto text;r jsonb;items jsonb;due timestamptz:=statement_timestamp()+interval '5 days';
+begin
+ select id into aid from public.perfis_manifestos where ativo and perfil='admin' limit 1;
+ select id,cidade into did,dcity from public.perfis_manifestos where ativo and perfil='entregador' and nullif(trim(cidade),'') is not null limit 1;
+ assert aid is not null and did is not null;
+ perform set_config('test.driver',did::text,true);perform set_config('test.admin',aid::text,true);perform set_config('test.fixture',fixture,true);
+ insert into public.td_manifestos(id,data) values(fixture,jsonb_build_object('id',fixture,'rows',jsonb_build_array(
+ jsonb_build_object('id','K','client','TEST CLIENT','city',dcity,'volumes',5,'freight',30000,'payments','[]'::jsonb,'collectionDueAt',due,'receivedAt',statement_timestamp()),
+ jsonb_build_object('id','F','client','FOREIGN','city','FOREIGN CITY','volumes',1,'freight',10000,'payments','[]'::jsonb)
+ )));
+ items=jsonb_build_array(jsonb_build_object('id','bev','description','Bebidas','category','Bebidas','volumes',2,'freight',10000),jsonb_build_object('id','food','description','Estiva','category','Estiva','volumes',3,'freight',20000));
+ perform set_config('request.jwt.claim.sub',did::text,true);
+ begin perform public.td_gerenciar_mercadorias(fixture,'K',items,30000);raise exception 'TEST driver split';exception when others then if sqlerrm like 'TEST%' then raise;end if;assert sqlerrm like '%administradores%';end;
+ perform set_config('request.jwt.claim.sub',aid::text,true);
+ begin perform public.td_gerenciar_mercadorias(fixture,'K',items||jsonb_build_array(items->0),30000);raise exception 'TEST duplicates';exception when others then if sqlerrm like 'TEST%' then raise;end if;assert sqlerrm like '%duplicadas%';end;
+ perform public.td_gerenciar_mercadorias(fixture,'K',items,30000);
+ perform set_config('request.jwt.claim.sub',did::text,true);
+ perform public.td_ajustar_mercadoria(fixture,'K','bev',9000,'discount','Acordo apenas nas bebidas',30000,0);
+ select data->'rows'->0 into r from public.td_manifestos where id=fixture;
+ assert (r->>'freight')::bigint=29000 and (r->'freights'->1->>'freight')::bigint=20000,'Desconto alterou outra mercadoria';
+ assert (r->>'collectionDueAt')::timestamptz=due and r->'payments'='[]'::jsonb;
+ perform public.td_pagar_conhecimento_versao(fixture,'K','bev','integral',null,null,'2026-11-22','Dinheiro',29000,0);
+ select data->'rows'->0 into r from public.td_manifestos where id=fixture;
+ assert (r->'payments'->0->>'amount')::bigint=9000;
+ assert (td_cargas_private.distribuir_fretes(r)->1->>'balance')::bigint=20000;
+ begin perform public.td_ajustar_mercadoria(fixture,'F','bev',9000,'discount','foreign',10000,0);raise exception 'TEST foreign adjustment';exception when others then if sqlerrm like 'TEST%' then raise;end if;assert sqlerrm like '%fora da sua cidade%';end;
+ perform public.td_operacao('create',jsonb_build_object('id',expense,'kind','expense','manifestId',fixture,'city',dcity,'data',jsonb_build_object('date','2026-11-22','description','Compra de carne para a embarcação','amount',1500,'category','Alimentação','source','Dinheiro das cobranças','attachments','[]'::jsonb)));
+ perform public.td_operacao('create',jsonb_build_object('id',expense));
+ assert (select count(*)=1 from public.td_operacoes where id=expense),'Despesa duplicada';
+ begin perform public.td_operacao('create',jsonb_build_object('id',gen_random_uuid(),'kind','expense','manifestId',fixture,'city','FOREIGN CITY','data',jsonb_build_object('date','2026-11-22','description','x','amount',1500,'category','Alimentação','source','Dinheiro das cobranças','attachments','[]'::jsonb)));raise exception 'TEST foreign expense';exception when others then if sqlerrm like 'TEST%' then raise;end if;assert sqlerrm like '%fora do seu acesso%';end;
+ photo=did::text||'/'||gen_random_uuid()||'.jpg';
+ insert into storage.objects(bucket_id,name,owner_id) values('td-comprovantes',photo,did::text);
+ perform public.td_operacao('create',jsonb_build_object('id',damage,'kind','damage','manifestId',fixture,'city',dcity,'rowId','K','freightId','bev','data',jsonb_build_object('date','2026-11-22','description','Bebida quebrada','quantity',1,'amount',5000,'attachments',jsonb_build_array(photo))));
+ begin perform public.td_operacao('approve',jsonb_build_object('id',damage,'expectedStatus','pending','amount',4000,'reason','test'));raise exception 'TEST driver approval';exception when others then if sqlerrm like 'TEST%' then raise;end if;assert sqlerrm like '%administradores%';end;
+ begin perform public.td_operacao('pay',jsonb_build_object('id',damage,'expectedStatus','pending'));raise exception 'TEST pay unapproved';exception when others then if sqlerrm like 'TEST%' then raise;end if;assert sqlerrm like '%aprovação%';end;
+ perform set_config('request.jwt.claim.sub',aid::text,true);
+ perform public.td_operacao('approve',jsonb_build_object('id',damage,'expectedStatus','pending','amount',4000,'reason','Avaria conferida'));
+ foreignphoto=aid::text||'/'||gen_random_uuid()||'.jpg';insert into storage.objects(bucket_id,name,owner_id) values('td-comprovantes',foreignphoto,aid::text);
+ perform public.td_operacao('create',jsonb_build_object('id',rejected,'kind','damage','manifestId',fixture,'city','FOREIGN CITY','rowId','F','data',jsonb_build_object('date','2026-11-22','description','FOREIGN AVARIA','quantity',1,'amount',2000,'attachments',jsonb_build_array(foreignphoto))));
+ perform public.td_operacao('reject',jsonb_build_object('id',rejected,'expectedStatus','pending','reason','Sem procedência'));
+ perform set_config('request.jwt.claim.sub',did::text,true);
+ begin perform public.td_operacao('pay',jsonb_build_object('id',damage,'expectedStatus','approved','source','Dinheiro das cobranças','date','2026-11-22','attachments','[]'::jsonb));raise exception 'TEST missing receipt';exception when others then if sqlerrm like 'TEST%' then raise;end if;assert sqlerrm like '%comprovante%';end;
+ perform public.td_operacao('pay',jsonb_build_object('id',damage,'expectedStatus','approved','source','Dinheiro das cobranças','date','2026-11-22','attachments',jsonb_build_array(photo)));
+ begin perform public.td_operacao('pay',jsonb_build_object('id',damage,'expectedStatus','approved'));raise exception 'TEST duplicate payment';exception when others then if sqlerrm like 'TEST%' then raise;end if;assert sqlerrm like '%atualizada%';end;
+ assert (select data->>'approvedAmount'='4000' and status='paid' and jsonb_array_length(events)=3 from public.td_operacoes where id=damage);
+ assert (select (data->'rows'->0->>'freight')::bigint=29000 and jsonb_array_length(data->'rows'->0->'payments')=1 from public.td_manifestos where id=fixture),'Avaria alterou frete ou pagamento';
+ perform set_config('role','authenticated',true);
+ assert (select count(*)=2 from public.td_operacoes where manifest_id=fixture),'RLS vazou outra cidade';
+ assert (select count(*)=1 from storage.objects where bucket_id='td-comprovantes' and name=photo),'RLS não liberou comprovante da própria cidade';
+ assert (select count(*)=0 from storage.objects where bucket_id='td-comprovantes' and name=foreignphoto),'Foto de outra cidade exposta';
+ assert not has_table_privilege('authenticated','public.td_operacoes','insert');
+ perform set_config('role','postgres',true);
+ perform set_config('request.jwt.claim.sub',aid::text,true);
+ perform set_config('role','authenticated',true);
+ assert (select count(*)=3 from public.td_operacoes where manifest_id=fixture),'Admin não viu todas as cidades';
+ perform set_config('role','postgres',true);
+ perform public.td_restaurar_operacoes((select jsonb_agg(to_jsonb(o)) from public.td_operacoes o where manifest_id=fixture));
+ assert (select count(*)=3 from public.td_operacoes where manifest_id=fixture),'Backup duplicou operações';
+ perform set_config('request.jwt.claim.sub',did::text,true);
+ begin perform public.td_restaurar_operacoes('[]'::jsonb);raise exception 'TEST driver restore';exception when others then if sqlerrm like 'TEST%' then raise;end if;assert sqlerrm like '%administradores%';end;
+ assert not has_function_privilege('anon','public.td_operacao(text,jsonb)','execute');
+end $$;
+rollback;

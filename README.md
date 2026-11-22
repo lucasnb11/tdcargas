@@ -64,3 +64,11 @@ Foram removidas as entradas repetidas de importação, o banner que duplicava o 
 A consulta global Conhecimentos é exclusiva do administrador. Entregadores acessam os conhecimentos pelo fluxo Viagens e manifestos → Abrir cargas para baixa → Destinatário.
 
 Os menus Conhecimentos, Clientes pagadores e Pendências de pagamento foram removidos de todos os perfis. A operação fica em Viagens e manifestos → Destinatário → Conhecimento; a busca e os filtros de situação continuam no manifesto. A consulta financeira e exportação ficam no Dashboard e no Relatório de cobranças administrativo.
+
+### Mercadorias, despesas e avarias
+
+A operação continua em Viagens e manifestos → destinatário → conhecimento. Mercadorias abre os itens importados; antes de pagamentos ou ajustes, o administrador pode dividir uma nota por categoria (Bebidas, Estiva, Outros), fechando os fretes e volumes com o conhecimento. Descrição e categoria são manuais quando o PDF não as informa. Pagamentos e ajustes individuais mantêm o saldo do conhecimento; ajustes exigem justificativa. O prazo e o bloqueio de cobrança continuam no conhecimento. Importar novamente não sobrescreve uma divisão manual nem fretes ajustados.
+
+Despesas e avarias é o controle por viagem/cidade. Despesas registram saídas já realizadas, com categoria, origem do dinheiro e até três fotos. Avarias são registradas no conhecimento ou item: quantidade, descrição, fotos e valor solicitado. Apenas administradores aprovam/rejeitam com justificativa. Após aprovação, o usuário da cidade ou administrador registra a indenização paga, com comprovante obrigatório. Este registro não transfere dinheiro e não reduz o frete. Os eventos ficam auditados, e o pagamento não pode ser registrado duas vezes.
+
+O resumo separa cobranças em espécie, outros meios, saídas do dinheiro das cobranças, despesas, indenizações, valores aprovados a pagar e recursos próprios. Não registra repasses à empresa nem reembolsos de recursos próprios. CSV administrativo exporta o filtro aplicado. Backup v2 inclui operações; v1 continua aceito. Fotos privadas ficam no Supabase Storage: o JSON guarda referências, não os binários. Leituras respeitam a cidade e URLs de imagens expiram em cinco minutos.
