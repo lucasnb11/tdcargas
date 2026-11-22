@@ -220,3 +220,14 @@ test('exportação centralizada preserva rota e histórico de pagamentos sem som
  const data=collectionReport(manifests,{role:'admin'},{manifestId:'A',city:'',category:'',query:''});const csv=collectionReportCsv(data.rows);
  assert.equal(data.rows.length,1);assert.equal(data.rows[0].received,1000);assert.ok(csv.includes('BELÉM / ALMEIRIM'));assert.ok(csv.includes('2026-11-18 | Conhecimento | 2.00 | OPERADOR | Dinheiro | Sem dinheiro'));assert.ok(csv.includes('2026-11-19 | Nota NF10 | 8.00 | ADMIN | Pix | Quitação do saldo'));
 });
+
+test('desconto mantém recebimento real, quita saldo e exporta trilha sem duplicar valores',()=>{
+ const {collectionReport,collectionReportCsv}=require('../.test-build/collection-report.js');
+ const {dashboardData}=require('../.test-build/dashboard.js');
+ const row={id:'K',client:'Cliente',city:'ALMEIRIM',volumes:3,freight:10000,originalFreight:11000,payments:[{amount:10000}],freightAdjustments:[{id:'A',kind:'discount',before:11000,after:10000,reason:'Acordo',operator:'Entregador',createdAt:'2026-11-22T00:00:00Z'}]};
+ const manifests=[{id:'M',rows:[row]}],user={role:'admin'};
+ const report=collectionReport(manifests,user,{manifestId:'',city:'',category:'',query:''});
+ assert.equal(report.rows[0].category,'Cobradas (Total)');assert.equal(report.rows[0].received,10000);assert.equal(report.rows[0].balance,0);
+ const summary=dashboardData(manifests,user).summary;assert.equal(summary.received,10000);assert.equal(summary.paidPieces,3);
+ const csv=collectionReportCsv(report.rows);assert.match(csv,/Frete original/);assert.match(csv,/110.00/);assert.match(csv,/Acordo/);
+});

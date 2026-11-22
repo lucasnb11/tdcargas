@@ -30,6 +30,10 @@ if(['receive','unlock'].includes(b.action)){
  if(b.action==='unlock'&&user.role!=='admin')return privateJson({error:'Somente administradores podem liberar pagamentos.'},{status:403});
  const {error}=await client.rpc('td_controlar_cobranca',{p_manifest_id:b.manifestId,p_row_id:b.rowId,p_action:b.action});if(error)throw Error(error.message);return privateJson({ok:true});
 }
+if(b.action==='adjust_freight'){
+ if(!Number.isSafeInteger(b.value)||b.value<=0||b.value>100000000000||!['correction','discount'].includes(b.kind)||typeof b.reason!=='string'||!b.reason.trim()||b.reason.trim().length>2000||!Number.isSafeInteger(b.expectedFreight)||!Number.isSafeInteger(b.expectedPaid))throw Error('Informe o novo valor e uma justificativa de até 2000 caracteres.');
+ const {error}=await client.rpc('td_ajustar_frete',{p_manifest_id:b.manifestId,p_row_id:b.rowId,p_value:b.value,p_kind:b.kind,p_reason:b.reason.trim(),p_expected_freight:b.expectedFreight,p_expected_paid:b.expectedPaid});if(error)throw Error(error.message);return privateJson({ok:true});
+}
 if(b.action==='pay_all'){
  if(typeof b.recipientKey!=='string'||!b.recipientKey.trim()||b.recipientKey.length>200||typeof b.manifestId!=='string'||!b.manifestId||!Number.isSafeInteger(b.expectedAmount)||b.expectedAmount<=0||!Number.isSafeInteger(b.expectedCount)||b.expectedCount<1)throw Error('Destinatário ou total inválido.');
  const {data,error}=await client.rpc('td_pagar_destinatario',{p_manifest_id:b.manifestId,p_recipient_key:b.recipientKey,p_expected_amount:b.expectedAmount,p_expected_count:b.expectedCount,p_date:b.date||null,p_method:b.method||null});if(error)throw Error(error.message);return privateJson(data);
@@ -37,6 +41,6 @@ if(b.action==='pay_all'){
 if(b.action==='pay'){
  if(b.type==='parcial'&&!Number.isSafeInteger(b.amount))throw Error('Valor inválido.');
  if(b.freightId!==undefined&&(typeof b.freightId!=='string'||!b.freightId||b.freightId.length>120))throw Error('Nota/frete inválido.');
- const {error}=await client.rpc('td_registrar_pagamento',{p_manifest_id:b.manifestId,p_row_id:b.rowId,p_freight_id:b.freightId||null,p_type:b.type||null,p_amount:b.amount??null,p_note:b.type==='parcial'?partialPaymentNote(b.reason,b.installments,b.note):null,p_date:b.date||null,p_method:b.method||null});if(error)throw Error(error.message);return privateJson({ok:true});
+ const {error}=await client.rpc('td_pagar_conhecimento_versao',{p_expected_freight:b.expectedFreight??null,p_expected_paid:b.expectedPaid??null,p_manifest_id:b.manifestId,p_row_id:b.rowId,p_freight_id:b.freightId||null,p_type:b.type||null,p_amount:b.amount??null,p_note:b.type==='parcial'?partialPaymentNote(b.reason,b.installments,b.note):null,p_date:b.date||null,p_method:b.method||null});if(error)throw Error(error.message);return privateJson({ok:true});
 }
 if(b.action!=='conference')throw Error('Operação inválida.');const {error}=await client.rpc('td_operar_manifesto',{p_manifest_id:b.manifestId,p_row_id:b.rowId,p_action:'conference',p_type:null,p_amount:null,p_note:null,p_date:null,p_method:null});if(error)throw Error(error.message);return privateJson({ok:true});}catch(e:any){return privateJson({error:e.message||'Não foi possível salvar.'},{status:400});}}
