@@ -98,6 +98,22 @@ QTD de Fretes: 3 Vencimento: 19/11/2026 Frete: 100,00
 10002 REMETENTE B 124 600,00 2 0 ESTIVAS 30,00
 10003 REMETENTE C 125 700,00 3 0 ESTIVAS 50,00`;
 const manifestsForFreights=[{id:'000099/2026',rows:[{id:'000001/2026',client:'Destinatário de exemplo',freight:10000}]}];
+test('importa a classe original de cada linha e identifica classes sem duplicar conhecimentos',()=>{
+ const {knowledgeClasses,availableClasses,matchesClass,freightBalances}=require('../.test-build/freights.js');
+ const doc=freightDoc.replace('500,00 1 0 ESTIVAS','50000 1 0 PCT BEBIDAS LATA').replace('700,00 3 0 ESTIVAS','700,00 3 0 NOVA CLASSE');
+ const parsed=parseFreightDocuments(doc,manifestsForFreights);
+ assert.equal(parsed.errors.length,0);
+ const row={id:'000001/2026',client:'Cliente',city:'ALMEIRIM',freight:10000,volumes:6,payments:[{amount:2000,freightId:'10001:123'}],freights:parsed.records[0].items};
+ assert.deepEqual(knowledgeClasses(row),['ESTIVAS','NOVA CLASSE','PCT BEBIDAS LATA']);
+ assert.deepEqual(availableClasses([row,row]),knowledgeClasses(row));
+ assert.equal(matchesClass(row,'pct bebidas lata'),true);assert.equal(matchesClass(row,'FRIOS'),false);
+ assert.equal(freightBalances(row)[0].balance,0);
+ const {collectionReport,collectionReportCsv}=require('../.test-build/collection-report.js');
+ const report=collectionReport([{id:'M',rows:[row]}],{role:'admin'},{manifestId:'',city:'',category:'',query:'',freightClass:'ESTIVAS'});
+ assert.equal(report.rows.length,1);assert.equal(report.rows[0].freight,10000);assert.match(collectionReportCsv(report.rows),/PCT BEBIDAS LATA/);
+ assert.deepEqual(report.classes,[{name:'ESTIVAS',count:1,pieces:2,freight:3000,received:0,balance:3000}]);
+ assert.equal(collectionReport([{id:'M',rows:[row]}],{role:'admin'},{manifestId:'',city:'',category:'',query:'',freightClass:'FRIOS'}).rows.length,0);
+});
 test('leitura de notas exige viagem, conhecimento, quantidade e soma corretos',()=>{
  const parsed=parseFreightDocuments(freightDoc,manifestsForFreights);assert.equal(parsed.errors.length,0);assert.equal(parsed.records.length,1);assert.equal(parsed.records[0].items.length,3);
  assert.equal(parseFreightDocuments(freightDoc.replace('50,00','51,00'),manifestsForFreights).records.length,0);

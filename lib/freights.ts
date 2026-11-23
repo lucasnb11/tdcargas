@@ -1,4 +1,8 @@
 export type FreightItem={id:string;noteNumber:string;tracking:string;sender:string;volumes:number;freight:number;description?:string;category?:string;originalFreight?:number};
+export const classKey=(value:unknown)=>String(value??'').trim().replace(/\s+/g,' ').toLocaleUpperCase('pt-BR');
+export function knowledgeClasses(row:any):string[]{return [...new Set<string>((row.freights||[]).map((item:any)=>classKey(item.category)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));}
+export function availableClasses(rows:any[]):string[]{return [...new Set(rows.flatMap(knowledgeClasses))].sort((a,b)=>a.localeCompare(b,'pt-BR'));}
+export function matchesClass(row:any,selected?:string){return !selected||knowledgeClasses(row).includes(classKey(selected));}
 export function validateFreights(items:any,expected:number):FreightItem[]{
  if(!Array.isArray(items)||!items.length||items.length>2000)throw Error('Informe entre 1 e 2000 notas/fretes.');
  const result=items.map((item:any)=>{
