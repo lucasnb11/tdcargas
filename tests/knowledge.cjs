@@ -89,6 +89,13 @@ test('pagamentos antigos são distribuídos por ordem e notas inválidas são re
  assert.throws(()=>freightBalances({freight:10000,freights:sampleFreights,payments:[{amount:100,freightId:'inexistente'}]}),/não encontrado/);
 });
 const {parseFreightDocuments}=require('../.test-build/freight-parser.js');
+test('reconstrói linhas de PDF nativo mesmo com fontes de alturas diferentes',()=>{
+ const {freightPageText}=require('../.test-build/freight-parser.js');
+ const item=(str,x,y)=>({str,transform:[1,0,0,1,x,y]});
+ const text=freightPageText([item('000001/2026',23,707.1),item('Conhecimento',23,726.7),item('Usuário Ultima Alteração',465,723.6),item('OPERADOR',432,709.6),item('Viagem',23,687.7),item('000099/2026',23,672.7),item('QTD de Fretes: 1',20,560.7),item('Frete:',417,560.7),item('100,00',480,559.9),item('10001 REMETENTE A 123 500,00 1',20,505.6),item('0',424,506.6),item('ESTIVAS 100,00',432,505.6)]);
+ const parsed=parseFreightDocuments(text,[{id:'000099/2026',rows:[{id:'000001/2026',client:'Cliente',freight:10000,volumes:1}]}]);
+ assert.equal(parsed.errors.length,0);assert.equal(parsed.records.length,1);assert.equal(parsed.records[0].items[0].category,'ESTIVAS');
+});
 const freightDoc=`Conhecimento Usuario Ultima Alteracao
 000001/2026 OPERADOR 17/11/2026 09:00
 Viagem

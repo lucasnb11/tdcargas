@@ -1,5 +1,16 @@
 import {validateFreights,FreightItem} from './freights';
 const money=(value:string)=>Math.round(Number(value.replace(/\./g,'').replace(',','.'))*100);
+// As colunas de um PDF podem ter linhas de base ligeiramente diferentes,
+// especialmente quando o número do conhecimento usa uma fonte maior.
+export function freightPageText(items:any[]):string{
+ const lines:{y:number;items:any[]}[]=[];
+ for(const item of items.filter(i=>typeof i.str==='string'&&i.str.trim()).sort((a,b)=>b.transform[5]-a.transform[5])){
+  const y=item.transform[5];
+  const line=lines.find(l=>Math.abs(l.y-y)<=4);
+  if(line)line.items.push(item);else lines.push({y,items:[item]});
+ }
+ return lines.map(l=>l.items.sort((a,b)=>a.transform[4]-b.transform[4]).map(i=>i.str.trim()).join(' ')).join('\n');
+}
 export function parseFreightDocuments(text:string,manifests:any[],targetManifestId?:string){
  // Espaços introduzidos pelo OCR entre o valor e a vírgula decimal.
  text=text.replace(/(?<=\d)[ \t]+,(?=\d{2}\b)/g,',').replace(/(?<=\d),[ \t]+(?=\d{2}\b)/g,',');

@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {parseFreightDocuments} from '../../lib/freight-parser';
+import {parseFreightDocuments,freightPageText} from '../../lib/freight-parser';
 export default function FreightImport({manifests,onSave,targetManifestId,guided=false,onSkip}:{manifests:any[];onSave:(records:any[])=>Promise<void>;targetManifestId?:string;guided?:boolean;onSkip?:()=>void}){
  const [progress,setProgress]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[preview,setPreview]=useState<any>(null),[confirmed,setConfirmed]=useState(false);const cancelled=useRef(false);
  useEffect(()=>()=>{cancelled.current=true;},[]);
@@ -10,9 +10,8 @@ export default function FreightImport({manifests,onSave,targetManifestId,guided=
   if(pdf.numPages>500)throw Error('Divida o PDF em arquivos de até 500 páginas.');let text='';
   for(let n=1;n<=pdf.numPages;n++){
    if(cancelled.current)throw Error('Leitura cancelada.');setProgress(`Lendo página ${n} de ${pdf.numPages}…`);
-   const page=await pdf.getPage(n),content=await page.getTextContent(),lines=new Map<number,any[]>();
-   for(const item of content.items as any[]){if(!item.str)continue;const y=Math.round(item.transform[5]/3)*3;lines.set(y,[...(lines.get(y)||[]),item]);}
-   let pageText=[...lines.keys()].sort((a,b)=>b-a).map(y=>lines.get(y)!.sort((a,b)=>a.transform[4]-b.transform[4]).map(i=>i.str).join(' ')).join('\n');
+   const page=await pdf.getPage(n),content=await page.getTextContent();
+   let pageText=freightPageText(content.items as any[]);
    if(!/Conhecimento[^\n]*\n\s*\d{6}\/\d{4}/i.test(pageText)){
     setProgress(`Reconhecendo página ${n} de ${pdf.numPages} (OCR)…`);
     if(!worker){const {createWorker,PSM}=await import('tesseract.js');worker=await createWorker('eng',1,{workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/worker.min.js'});await worker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_BLOCK});}
