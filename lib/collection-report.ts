@@ -1,5 +1,5 @@
 import {canAccessCity,normalizeCity} from './cities';
-import {paid,tripRows} from './control';
+import {paid,tripRows,matchesKnowledgeSearch} from './control';
 import {classKey,freightBalances,knowledgeClasses,matchesClass} from './freights';
 import {collectionState} from './collection';
 export const REPORT_CATEGORIES=['Cobradas (Total)','Cobradas (Parcial)','Pendentes de cobrança'] as const;
@@ -10,8 +10,7 @@ export function reportCategory(row:any):ReportCategory{
  return received>=row.freight?REPORT_CATEGORIES[0]:received>0?REPORT_CATEGORIES[1]:REPORT_CATEGORIES[2];
 }
 export function collectionReport(manifests:any[],user:{role:string;city?:string|null},filters:ReportFilters,now=Date.now()){
- const query=filters.query.trim().toLocaleLowerCase('pt-BR');
- const rows=manifests.flatMap(tripRows).filter(row=>canAccessCity(user,row.city)&&(!filters.manifestId||row.manifestId===filters.manifestId)&&(!filters.city||normalizeCity(row.city)===normalizeCity(filters.city))&&matchesClass(row,filters.freightClass)&&(!query||`${row.id} ${row.client} ${row.manifestId}`.toLocaleLowerCase('pt-BR').includes(query)))
+ const rows=manifests.flatMap(tripRows).filter(row=>canAccessCity(user,row.city)&&(!filters.manifestId||row.manifestId===filters.manifestId)&&(!filters.city||normalizeCity(row.city)===normalizeCity(filters.city))&&matchesClass(row,filters.freightClass)&&matchesKnowledgeSearch(row,filters.query))
  .map(row=>({...row,category:reportCategory(row),received:paid(row),balance:Math.max(0,row.freight-paid(row)),blocked:collectionState(row,now).blocked}));
  const groups=REPORT_CATEGORIES.map(category=>{
   const items=rows.filter(row=>row.category===category);

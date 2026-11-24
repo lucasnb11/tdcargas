@@ -3,6 +3,15 @@ const assert=require('node:assert/strict');
 const {validateKnowledge}=require('../.test-build/knowledge.js');
 const {clientSummary,tripSummary,pendingRowsForManifest}=require('../.test-build/control.js');
 const valid={id:' CT-001 ',client:' Cliente A ',city:'Gurupá',kind:'FOB',volumes:2,freight:15000};
+test('busca aceita acentos, pontuação e espaços nos destinatários',()=>{
+ const {matchesKnowledgeSearch}=require('../.test-build/control.js');
+ const row={client:'M. DUARTE VIANA COMERCIO',id:'017986/2026',manifestId:'000012/2026'};
+ assert.ok(matchesKnowledgeSearch(row,'M. Duarte Viana Comércio'));
+ assert.ok(matchesKnowledgeSearch(row,'M Duarte Viana Comércio'));
+ assert.ok(matchesKnowledgeSearch(row,'017986/2026'));
+ assert.ok(matchesKnowledgeSearch(row,'duarte  comércio'));
+ assert.equal(matchesKnowledgeSearch(row,'outro cliente'),false);
+});
 test('conhecimento exige manifesto e dados válidos',()=>{
  assert.throws(()=>validateKnowledge('',valid,['GURUPA']),/manifesto/);
  assert.equal(validateKnowledge('001',valid,['GURUPA']).city,'GURUPA');

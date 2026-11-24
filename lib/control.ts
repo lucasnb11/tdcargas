@@ -35,3 +35,6 @@ export function recipientGroups(rows: any[]) {
  }
  return [...groups.values()];
 }
+// Busca tolerante a acentos, pontuação e espaços, sem alterar a identidade do destinatário.
+export function normalizeSearch(value:unknown):string{return String(value??'').normalize('NFD').replace(/\p{M}/gu,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim().toLocaleUpperCase('pt-BR');}
+export function matchesKnowledgeSearch(row:any,query:string):boolean{const text=normalizeSearch(`${row.client??''} ${row.id??''} ${row.manifestId??''}`);return normalizeSearch(query).split(' ').every(term=>text.includes(term));}

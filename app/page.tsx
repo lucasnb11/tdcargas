@@ -16,7 +16,7 @@ import FreightAdjustment from './components/freight-adjustment';
 import {PARTIAL_REASONS,partialPaymentNote} from '../lib/payment';
 import {normalizeCity} from '../lib/cities';
 import {parseManifest} from '../lib/parser';
-import {paid,status,tripRows,pendingRows,tripSummary,clientSummary,pendingRowsForManifest,recipientGroups} from '../lib/control';
+import {paid,status,tripRows,pendingRows,tripSummary,clientSummary,pendingRowsForManifest,recipientGroups,matchesKnowledgeSearch} from '../lib/control';
 const brl=(v:number)=>(v/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 export default function Page(){
  const [access,setAccess]=useState<any>(null),[profiles,setProfiles]=useState<any[]>([]),[accessLoaded,setAccessLoaded]=useState(false),[section,setSection]=useState('loads'),[profileName,setProfileName]=useState(''),[profileEmail,setProfileEmail]=useState(''),[profileRole,setProfileRole]=useState('entregador');
@@ -55,7 +55,7 @@ export default function Page(){
  useEffect(()=>{const f=(e:KeyboardEvent)=>{if(e.key==='Escape'&&!busy){setModal(null);setPreview(null)}};window.addEventListener('keydown',f);return()=>window.removeEventListener('keydown',f)},[busy]);
  const consolidated=section==='pending',allKnowledge=section==='knowledge'&&isAdmin,crossManifest=consolidated||allKnowledge;
  const clients=clientSummary(list);
- const manifest=list.find(m=>m.id===selected),allPending=pendingRows(list),rows=consolidated?pendingRowsForManifest(list,selected):allKnowledge?list.flatMap(tripRows):tripRows(manifest),total=rows.reduce((a:number,r:any)=>a+r.freight,0),received=rows.reduce((a:number,r:any)=>a+paid(r),0),visible=rows.filter((r:any)=>(!clientFilter||String(r.client).trim().replace(/\s+/g,' ').toLocaleUpperCase('pt-BR')===clientFilter)&&(!city||r.city===city)&&matchesClass(r,freightClass)&&(filter==='Todos'||status(r)===filter)&&(`${r.client} ${r.id} ${r.manifestId}`.toLowerCase().includes(query.toLowerCase())));
+ const manifest=list.find(m=>m.id===selected),allPending=pendingRows(list),rows=consolidated?pendingRowsForManifest(list,selected):allKnowledge?list.flatMap(tripRows):tripRows(manifest),total=rows.reduce((a:number,r:any)=>a+r.freight,0),received=rows.reduce((a:number,r:any)=>a+paid(r),0),visible=rows.filter((r:any)=>(!clientFilter||String(r.client).trim().replace(/\s+/g,' ').toLocaleUpperCase('pt-BR')===clientFilter)&&(!city||r.city===city)&&matchesClass(r,freightClass)&&(filter==='Todos'||status(r)===filter)&&matchesKnowledgeSearch(r,query));
  const visibleKnowledgeKeys=new Set(visible.map((row:any)=>JSON.stringify([row.manifestId,row.id])));
  const groupedRecipients=recipientGroups(allKnowledge?list.flatMap(tripRows):tripRows(manifest)).filter(group=>group.rows.some((row:any)=>visibleKnowledgeKeys.has(JSON.stringify([row.manifestId,row.id]))));
  const activeRecipient=recipientSelection?recipientGroups(list.flatMap(tripRows)).find(group=>group.key===recipientSelection.key):null;
