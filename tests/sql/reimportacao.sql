@@ -1,0 +1,36 @@
+begin;
+do $$
+declare aid uuid;mid text:='999999/9999';m jsonb;old_row jsonb;new_row jsonb;res jsonb;d jsonb;old_item jsonb;new_item jsonb;old_rev int;
+begin
+ select id into aid from public.perfis_manifestos where ativo and perfil='admin' limit 1;
+ assert aid is not null;
+ assert not exists(select 1 from public.td_manifestos where id=mid);
+ perform set_config('request.jwt.claim.sub',aid::text,true);
+ old_item=jsonb_build_object('id','100:1','tracking','100','noteNumber','1','sender','TEST','category','ESTIVAS','volumes',1,'freight',1000);
+ old_row=jsonb_build_object('id','999991/9999','client','TEST','city','ALMEIRIM','kind','FOB','volumes',1,'freight',1000,'payments',jsonb_build_array(jsonb_build_object('amount',100,'type','parcial')),'conferences','[]'::jsonb,'freights',jsonb_build_array(old_item),'collectionDueAt',statement_timestamp()+interval '4 days');
+ new_row=jsonb_build_object('id','999992/9999','client','NEW','city','ALMEIRIM','kind','FOB','volumes',2,'freight',2000);
+ m=jsonb_build_object('id',mid,'date','26/11/2026','time','19:00','route','TEST','vessel','F/B DONA DOMINGAS','rows',jsonb_build_array(old_row));
+ insert into public.td_manifestos(id,data) values(mid,m);
+ perform set_config('role','authenticated',true);
+ res=public.td_importar_manifesto_incremental(jsonb_set(m,'{rows}',jsonb_build_array(old_row||jsonb_build_object('freight',5000),new_row)));
+ assert (res->>'added')::int=1 and (res->>'existing')::int=1;
+ assert res->'manifest'->'rows'->0=old_row,'Histórico alterado';
+ assert res->'manifest'->'rows'->1->'payments'='[]'::jsonb;
+ old_rev=(res->'manifest'->>'revision')::int;
+ res=public.td_importar_manifesto_incremental(jsonb_set(m,'{rows}',jsonb_build_array(new_row)));
+ assert (res->>'added')::int=0 and (res->>'absent')::int=1 and (res->'manifest'->>'revision')::int=old_rev;
+ new_item=old_item||jsonb_build_object('id','200:1','tracking','200','volumes',2,'freight',2000,'category','BEBIDAS CX');
+ d=jsonb_build_array(jsonb_build_object('manifestId',mid,'rowId',old_row->>'id','items',jsonb_build_array(old_item||jsonb_build_object('category','ALTERADA'))),jsonb_build_object('manifestId',mid,'rowId',new_row->>'id','items',jsonb_build_array(new_item)));
+ res=public.td_vincular_fretes_faltantes(d);
+ assert (res->>'updated')::int=1 and (res->>'preserved')::int=1;
+ res=public.td_vincular_fretes_faltantes(d);
+ assert (res->>'updated')::int=0 and (res->>'preserved')::int=2;
+ select data into m from public.td_manifestos where id=mid;
+ assert m->'rows'->0=old_row;
+ assert m->'rows'->1->'freights'->0=new_item;
+ perform set_config('role','postgres',true);
+ perform set_config('request.jwt.claim.sub','',true);
+ assert not has_function_privilege('anon','public.td_importar_manifesto_incremental(jsonb)','execute');
+ assert not has_function_privilege('anon','public.td_vincular_fretes_faltantes(jsonb)','execute');
+end $$;
+rollback;

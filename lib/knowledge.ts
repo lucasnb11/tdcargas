@@ -1,5 +1,11 @@
 import {normalizeCity} from './cities';
 
+export function manifestImportSummary(existing:any,incoming:any){
+ const known=new Set<string>((existing?.rows||[]).map((row:any)=>row.id));
+ const received=new Set<string>((incoming?.rows||[]).map((row:any)=>row.id));
+ return {added:[...received].filter(id=>!known.has(id)).length,existing:[...received].filter(id=>known.has(id)).length,absent:[...known].filter(id=>!received.has(id)).length};
+}
+
 export function validateKnowledge(manifestId: unknown, input: any, cities: string[]) {
  if(typeof manifestId!=='string'||!manifestId.trim())throw Error('Selecione o manifesto do conhecimento.');
  const row={id:typeof input?.id==='string'?input.id.trim():'',client:typeof input?.client==='string'?input.client.trim():'',city:typeof input?.city==='string'?normalizeCity(input.city):'',kind:input?.kind,volumes:input?.volumes,freight:input?.freight};

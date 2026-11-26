@@ -10,7 +10,7 @@ import {loadManifests} from '../../../lib/repository';
 export const dynamic='force-dynamic';
 export async function GET(){try{const user=await getAccess();if(!user||!['admin','entregador'].includes(user.role))return privateJson({error:'Acesso não autorizado.'},{status:403});return privateJson(await loadManifests());}catch(e:any){return privateJson({error:e.message||'Erro ao carregar manifestos.'},{status:500});}}
 export async function POST(req:Request){try{const user=await getAccess();if(!user||!['admin','entregador'].includes(user.role))return privateJson({error:'Acesso não autorizado.'},{status:403});const b:any=await req.json(),client=await createSupabase();
-if(b.action==='import'){if(user.role!=='admin')return privateJson({error:'Apenas administradores podem importar.'},{status:403});const m=b.manifest;if(!/^\d{6}\/\d{4}$/.test(m?.id)||!Array.isArray(m.rows)||!m.rows.length||m.rows.length>5000||m.rows.some((r:any)=>!r.id||!r.client||!Number.isSafeInteger(r.freight)||r.freight<0))throw Error('Manifesto inválido.');m.vessel=validateVessel(m.vessel);m.rows.forEach((r:any)=>{r.payments=[];r.conferences=[]});const {error}=await client.from('td_manifestos').insert({id:m.id,data:m});if(error)throw Error(error.code==='23505'?'Esta viagem já foi importada.':error.message);return privateJson({ok:true});}
+if(b.action==='import'){if(user.role!=='admin')return privateJson({error:'Apenas administradores podem importar.'},{status:403});const m=b.manifest;if(!/^\d{6}\/\d{4}$/.test(m?.id)||!Array.isArray(m.rows)||!m.rows.length||m.rows.length>5000||m.rows.some((r:any)=>!r.id||!r.client||!Number.isSafeInteger(r.freight)||r.freight<0))throw Error('Manifesto inválido.');m.vessel=validateVessel(m.vessel);const {data,error}=await client.rpc('td_importar_manifesto_incremental',{p_manifest:m});if(error)throw Error(error.message);return privateJson(data);}
 if(b.action==='add_knowledge'){
  if(user.role!=='admin')return privateJson({error:'Apenas administradores podem cadastrar conhecimentos.'},{status:403});
  const cities=await getCityCatalog();
@@ -23,8 +23,8 @@ if(b.action==='save_freights'){
  if(user.role!=='admin')return privateJson({error:'Apenas administradores podem vincular notas/fretes.'},{status:403});
  if(!Array.isArray(b.documents)||!b.documents.length||b.documents.length>1000)throw Error('Importação de notas/fretes inválida.');
  const manifests=await loadManifests();
- const documents=b.documents.map((d:any)=>{const row=manifests.find(m=>m.id===d.manifestId)?.rows.find((r:any)=>r.id===d.rowId);if(!row)throw Error('Conhecimento não encontrado no manifesto.');return {manifestId:d.manifestId,rowId:d.rowId,items:validateFreights(d.items,row.freight)};});
- const {data,error}=await client.rpc('td_salvar_fretes',{p_documents:documents});if(error)throw Error(error.message);return privateJson(data);
+ const documents=b.documents.map((d:any)=>{const row=manifests.find(m=>m.id===d.manifestId)?.rows.find((r:any)=>r.id===d.rowId);if(!row)throw Error('Conhecimento não encontrado no manifesto.');return {manifestId:d.manifestId,rowId:d.rowId,items:row.freights?.length||row.itemsManaged||row.freightAdjustments?.length?d.items:validateFreights(d.items,row.freight)};});
+ const {data,error}=await client.rpc('td_vincular_fretes_faltantes',{p_documents:documents});if(error)throw Error(error.message);return privateJson(data);
 }
 if(['receive','unlock'].includes(b.action)){
  if(b.action==='unlock'&&user.role!=='admin')return privateJson({error:'Somente administradores podem liberar pagamentos.'},{status:403});

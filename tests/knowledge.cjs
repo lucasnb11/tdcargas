@@ -3,6 +3,11 @@ const assert=require('node:assert/strict');
 const {validateKnowledge}=require('../.test-build/knowledge.js');
 const {clientSummary,tripSummary,pendingRowsForManifest}=require('../.test-build/control.js');
 const valid={id:' CT-001 ',client:' Cliente A ',city:'Gurupá',kind:'FOB',volumes:2,freight:15000};
+test('prévia distingue conhecimentos novos, existentes e ausentes do arquivo',()=>{
+ const {manifestImportSummary}=require('../.test-build/knowledge.js');
+ assert.deepEqual(manifestImportSummary({rows:[{id:'A'},{id:'B'}]},{rows:[{id:'B'},{id:'C'}]}),{added:1,existing:1,absent:1});
+ assert.deepEqual(manifestImportSummary(null,{rows:[{id:'A'}]}),{added:1,existing:0,absent:0});
+});
 test('busca aceita acentos, pontuação e espaços nos destinatários',()=>{
  const {matchesKnowledgeSearch}=require('../.test-build/control.js');
  const row={client:'M. DUARTE VIANA COMERCIO',id:'017986/2026',manifestId:'000012/2026'};
@@ -114,6 +119,12 @@ QTD de Fretes: 3 Vencimento: 19/11/2026 Frete: 100,00
 10002 REMETENTE B 124 600,00 2 0 ESTIVAS 30,00
 10003 REMETENTE C 125 700,00 3 0 ESTIVAS 50,00`;
 const manifestsForFreights=[{id:'000099/2026',rows:[{id:'000001/2026',client:'Destinatário de exemplo',freight:10000}]}];
+test('PDF reprocessado preserva conhecimentos detalhados e vincula somente os faltantes',()=>{
+ const existing={...manifestsForFreights[0].rows[0],freights:[{id:'old'}],freight:9999};
+ const other={...manifestsForFreights[0].rows[0],id:'000002/2026'};
+ const parsed=parseFreightDocuments(freightDoc+'\n'+freightDoc.replace('000001/2026','000002/2026'),[{id:'000099/2026',rows:[existing,other]}]);
+ assert.equal(parsed.preserved,1);assert.equal(parsed.records.length,1);assert.equal(parsed.records[0].rowId,other.id);assert.deepEqual(parsed.errors,[]);
+});
 test('importa a classe original de cada linha e identifica classes sem duplicar conhecimentos',()=>{
  const {knowledgeClasses,availableClasses,matchesClass,freightBalances}=require('../.test-build/freights.js');
  const doc=freightDoc.replace('500,00 1 0 ESTIVAS','50000 1 0 PCT BEBIDAS LATA').replace('700,00 3 0 ESTIVAS','700,00 3 0 NOVA CLASSE');

@@ -14,7 +14,7 @@ export function freightPageText(items:any[]):string{
 export function parseFreightDocuments(text:string,manifests:any[],targetManifestId?:string){
  // Espaços introduzidos pelo OCR entre o valor e a vírgula decimal.
  text=text.replace(/(?<=\d)[ \t]+,(?=\d{2}\b)/g,',').replace(/(?<=\d),[ \t]+(?=\d{2}\b)/g,',');
- const records:any[]=[],errors:string[]=[];
+ const records:any[]=[],errors:string[]=[];let preserved=0;
  const starts=[...text.matchAll(/(?:^|\n)Conhecimento[^\n]*\n\s*(\d{6}\/\d{4})/gi)];
  if(!starts.length)throw Error('Não foi possível reconhecer os conhecimentos no PDF.');
  const grouped=new Map<string,any>();
@@ -46,16 +46,16 @@ export function parseFreightDocuments(text:string,manifests:any[],targetManifest
  });
  for(const document of grouped.values()){
   try{
-   if(document.conflict)throw Error('há dados divergentes para a mesma nota no PDF');
    const manifest=manifests.find(m=>m.id===document.manifestId),row=manifest?.rows.find((r:any)=>r.id===document.rowId);
    if(!row)throw Error('importe primeiro o manifesto que contém esse conhecimento');
+   if(row.freights?.length||row.itemsManaged||row.freightAdjustments?.length){preserved++;continue;}
+   if(document.conflict)throw Error('há dados divergentes para a mesma nota no PDF');
    if(!document.expectedCount||document.items.length!==document.expectedCount)throw Error('a quantidade de fretes extraída não confere com o documento');
    if(document.total!==row.freight)throw Error('o frete do PDF diverge do manifesto');
    const items=validateFreights(document.items,row.freight);
    if(Number.isSafeInteger(row.volumes)&&items.reduce((sum,item)=>sum+item.volumes,0)!==row.volumes)throw Error('a soma dos volumes não confere com o manifesto');
-   if(row.itemsManaged||row.freightAdjustments?.length)throw Error('mercadorias divididas ou fretes ajustados serão preservados');
    records.push({manifestId:document.manifestId,rowId:document.rowId,client:row.client,items});
   }catch(e:any){errors.push(`Conhecimento ${document.rowId} / viagem ${document.manifestId}: ${e.message}.`);}
  }
- return {records,errors};
+ return {records,errors,preserved};
 }
